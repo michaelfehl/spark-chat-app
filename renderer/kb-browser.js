@@ -189,13 +189,29 @@ function renderFolderTree(items, container = folderTree, basePath = '') {
   for (const item of items) {
     if (item.type === 'folder') {
       const folderPath = basePath ? `${basePath}/${item.name}` : item.name;
+      const fileCount = item.children ? countFilesInFolder(item.children) : 0;
       
       const folderItem = document.createElement('div');
       folderItem.className = 'folder-item';
-      folderItem.innerHTML = `<span class="folder-icon">▶</span> 📁 ${item.name}`;
+      if (selectedFolders.has(folderPath)) {
+        folderItem.classList.add('selected');
+      }
+      folderItem.innerHTML = `
+        <span class="folder-check">${selectedFolders.has(folderPath) ? '✓' : ''}</span>
+        <span class="folder-icon">▶</span> 
+        📁 ${item.name} 
+        <span class="folder-count">(${fileCount})</span>
+      `;
       folderItem.style.marginLeft = basePath ? '20px' : '0';
       
+      // Click to select/deselect folder
       folderItem.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleSidebarFolderSelection(folderItem, folderPath);
+      });
+      
+      // Double-click to navigate
+      folderItem.addEventListener('dblclick', (e) => {
         e.stopPropagation();
         document.querySelectorAll('.folder-item').forEach(f => f.classList.remove('active'));
         folderItem.classList.add('active');
@@ -216,6 +232,22 @@ function renderFolderTree(items, container = folderTree, basePath = '') {
       }
     }
   }
+}
+
+// Toggle folder selection from sidebar
+function toggleSidebarFolderSelection(element, path) {
+  if (selectedFolders.has(path)) {
+    selectedFolders.delete(path);
+    element.classList.remove('selected');
+    element.querySelector('.folder-check').textContent = '';
+  } else {
+    selectedFolders.add(path);
+    element.classList.add('selected');
+    element.querySelector('.folder-check').textContent = '✓';
+  }
+  
+  updateSelectionUI();
+  notifySelectionChanged();
 }
 
 // Show files in a folder

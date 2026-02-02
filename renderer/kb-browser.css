@@ -133,6 +133,23 @@ body {
   color: var(--accent);
 }
 
+.folder-item.selected {
+  background: rgba(59, 130, 246, 0.2);
+  border-left: 3px solid #60a5fa;
+}
+
+.folder-check {
+  width: 16px;
+  color: #60a5fa;
+  font-size: 12px;
+}
+
+.folder-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+
 .folder-item .folder-icon {
   transition: transform 0.2s;
 }
