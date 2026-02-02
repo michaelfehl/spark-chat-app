@@ -779,6 +779,30 @@ body {
   cursor: pointer;
 }
 
+.agent-reorder {
+  display: flex;
+  flex-direction: column;
+  margin-right: 8px;
+}
+
+.reorder-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 10px;
+}
+
+.reorder-btn:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+.reorder-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 .agent-item:hover {
   background: var(--border);
 }

@@ -55,5 +55,7 @@ contextBridge.exposeInMainWorld('sparkAPI', {
   saveAssistant: (assistant) =>
     ipcRenderer.invoke('save-assistant', assistant),
   deleteAssistant: (id) =>
-    ipcRenderer.invoke('delete-assistant', id)
+    ipcRenderer.invoke('delete-assistant', id),
+  reorderAgents: (order) =>
+    ipcRenderer.invoke('reorder-agents', order)
 });

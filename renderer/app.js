@@ -716,19 +716,33 @@ function closeAgentModal() {
 function renderAgentList() {
   agentList.innerHTML = '';
   
-  for (const agent of assistants) {
+  assistants.forEach((agent, index) => {
     const item = document.createElement('div');
     item.className = 'agent-item';
     item.innerHTML = `
+      <div class="agent-reorder">
+        <button class="reorder-btn up" data-id="${agent.id}" ${index === 0 ? 'disabled' : ''}>▲</button>
+        <button class="reorder-btn down" data-id="${agent.id}" ${index === assistants.length - 1 ? 'disabled' : ''}>▼</button>
+      </div>
       <div class="agent-item-info">
         <div class="agent-item-name">${agent.name}</div>
-        <div class="agent-item-desc">${agent.description || ''}</div>
+        <div class="agent-item-desc">${agent.description || ''}${agent.defaultKB?.length ? ' 📚 ' + agent.defaultKB.join(', ') : ''}</div>
       </div>
       <div class="agent-item-actions">
-        <button class="edit" data-id="${agent.id}">✏️ Edit</button>
-        ${agent.id !== 'asst_default' ? `<button class="delete" data-id="${agent.id}">🗑️</button>` : ''}
+        <button class="edit" data-id="${agent.id}">✏️</button>
+        ${!agent.isDefault ? `<button class="delete" data-id="${agent.id}">🗑️</button>` : ''}
       </div>
     `;
+    
+    // Reorder buttons
+    item.querySelector('.reorder-btn.up')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      moveAgent(agent.id, 'up');
+    });
+    item.querySelector('.reorder-btn.down')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      moveAgent(agent.id, 'down');
+    });
     
     item.querySelector('.edit').addEventListener('click', (e) => {
       e.stopPropagation();
@@ -748,7 +762,21 @@ function renderAgentList() {
     }
     
     agentList.appendChild(item);
-  }
+  });
+}
+
+// Move agent up or down
+async function moveAgent(agentId, direction) {
+  const idx = assistants.findIndex(a => a.id === agentId);
+  if (idx === -1) return;
+  const newIdx = direction === 'up' ? idx - 1 : idx + 1;
+  if (newIdx < 0 || newIdx >= assistants.length) return;
+  
+  [assistants[idx], assistants[newIdx]] = [assistants[newIdx], assistants[idx]];
+  renderAgentList();
+  
+  // Save to API
+  await window.sparkAPI.reorderAgents(assistants.map(a => a.id));
 }
 
 // Show agent form (new)

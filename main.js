@@ -456,6 +456,16 @@ ipcMain.handle('delete-assistant', async (event, assistantId) => {
   }
 });
 
+// Reorder agents via Spark API
+ipcMain.handle('reorder-agents', async (event, order) => {
+  try {
+    const result = await sparkApiRequest('POST', '/api/agents/reorder', { order });
+    return { success: !!result?.success };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 // Scan knowledge base directory
 function scanDirectory(dirPath, basePath = '') {
   const items = [];
