@@ -1,0 +1,42 @@
+{
+  "name": "spark-chat",
+  "version": "1.0.0",
+  "description": "Spark LLM Chat Application for macOS",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --mac",
+    "build:dmg": "electron-builder --mac dmg",
+    "build:app": "electron-builder --mac dir"
+  },
+  "author": "CCS Associates",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {
+    "marked": "^11.0.0"
+  },
+  "build": {
+    "appId": "com.ccsa.spark-chat",
+    "productName": "Spark Chat",
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "assets/icon.icns",
+      "target": [
+        "dmg",
+        "dir"
+      ]
+    },
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "assets/**/*"
+    ]
+  }
+}

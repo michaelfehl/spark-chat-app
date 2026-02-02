@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <title>Spark Chat</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Titlebar drag region for macOS -->
+    <div class="titlebar">
+      <div class="titlebar-drag"></div>
+      <div class="titlebar-title">
+        <span class="spark-icon">⚡</span>
+        <span>Spark Chat</span>
+      </div>
+      <div class="connection-status" id="connectionStatus">
+        <span class="status-dot disconnected"></span>
+        <span class="status-text">Checking...</span>
+      </div>
+    </div>
+
+    <!-- Main chat area -->
+    <div class="chat-container">
+      <div class="messages" id="messages">
+        <div class="welcome-message">
+          <div class="welcome-icon">⚡</div>
+          <h2>Welcome to Spark Chat</h2>
+          <p>Chat with Spark LLM running on your local network via Tailscale.</p>
+          <p class="hint">Make sure Tailscale is connected to reach spark1 (100.86.36.112)</p>
+        </div>
+      </div>
+
+      <!-- Input area -->
+      <div class="input-area">
+        <div class="input-options">
+          <label class="toggle-option">
+            <input type="checkbox" id="knowledgeBase">
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">📚 Knowledge Base</span>
+          </label>
+          <label class="toggle-option">
+            <input type="checkbox" id="webSearch" checked>
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">🔍 Web Search</span>
+          </label>
+          <button class="upload-btn" id="uploadBtn" title="Upload PDF">
+            📄 Upload
+          </button>
+          <button class="clear-btn" id="clearBtn" title="Clear Chat">
+            🗑️ Clear
+          </button>
+        </div>
+        
+        <div class="input-wrapper">
+          <textarea 
+            id="messageInput" 
+            placeholder="Type your message... (⌘+Enter to send)"
+            rows="1"
+          ></textarea>
+          <button class="send-btn" id="sendBtn" disabled>
+            <span class="send-icon">➤</span>
+          </button>
+        </div>
+
+        <div id="uploadedFile" class="uploaded-file hidden">
+          <span class="file-icon">📄</span>
+          <span class="file-name"></span>
+          <button class="remove-file" title="Remove file">✕</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
