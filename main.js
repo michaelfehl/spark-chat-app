@@ -98,40 +98,114 @@ ipcMain.handle('select-file', async () => {
   return null;
 });
 
-// Web search using Brave Search API
+// Web search and page fetching
 async function performWebSearch(query) {
   try {
-    const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5`;
+    // Check if query mentions specific news sites - fetch directly
+    const newsPatterns = [
+      { pattern: /cnn/i, url: 'https://lite.cnn.com/' },
+      { pattern: /bbc/i, url: 'https://www.bbc.com/news' },
+      { pattern: /reuters/i, url: 'https://www.reuters.com/' },
+      { pattern: /npr/i, url: 'https://text.npr.org/' },
+      { pattern: /ap news|associated press/i, url: 'https://apnews.com/' }
+    ];
     
+    for (const site of newsPatterns) {
+      if (site.pattern.test(query)) {
+        return await fetchPageContent(site.url, query);
+      }
+    }
+    
+    // For general queries, use DuckDuckGo Instant Answers API
+    const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1`;
+    
+    const response = await fetch(ddgUrl, {
+      headers: { 'User-Agent': 'SparkChat/1.0' }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      
+      let results = '';
+      
+      if (data.AbstractText) {
+        results += `Summary: ${data.AbstractText}\nSource: ${data.AbstractURL}\n\n`;
+      }
+      
+      if (data.RelatedTopics && data.RelatedTopics.length > 0) {
+        const topics = data.RelatedTopics
+          .filter(t => t.Text)
+          .slice(0, 5)
+          .map((t, i) => `[${i + 1}] ${t.Text}`)
+          .join('\n');
+        if (topics) results += `Related:\n${topics}`;
+      }
+      
+      if (results) {
+        return { success: true, results, count: 1 };
+      }
+    }
+    
+    // Fallback: return helpful message
+    return {
+      success: true,
+      results: `Web search attempted for: "${query}". For best results with news sites, ask about specific outlets (CNN, BBC, Reuters, NPR, AP News) and I'll fetch their latest content directly.`,
+      count: 0
+    };
+    
+  } catch (error) {
+    console.error('Web search error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Fetch and extract content from a page
+async function fetchPageContent(url, query) {
+  try {
     const response = await fetch(url, {
       headers: {
-        'Accept': 'application/json',
-        'X-Subscription-Token': BRAVE_API_KEY
-      }
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+      },
+      signal: AbortSignal.timeout(10000)
     });
     
     if (!response.ok) {
-      throw new Error(`Search failed: ${response.status}`);
+      throw new Error(`Failed to fetch: ${response.status}`);
     }
     
-    const data = await response.json();
-    const results = data.web?.results || [];
+    const html = await response.text();
     
-    // Format results for context
-    const formatted = results.map((r, i) => 
-      `[${i + 1}] ${r.title}\n    ${r.url}\n    ${r.description || ''}`
-    ).join('\n\n');
+    // Extract text content (basic HTML stripping)
+    let text = html
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
+      .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '')
+      .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '')
+      .replace(/<[^>]+>/g, '\n')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/\n\s*\n/g, '\n')
+      .trim();
+    
+    // Limit length
+    if (text.length > 4000) {
+      text = text.substring(0, 4000) + '...';
+    }
     
     return {
       success: true,
-      results: formatted,
-      count: results.length
+      results: `Content from ${url} (fetched ${new Date().toLocaleTimeString()}):\n\n${text}`,
+      count: 1,
+      directFetch: true
     };
+    
   } catch (error) {
-    console.error('Web search error:', error);
     return {
       success: false,
-      error: error.message
+      error: `Could not fetch ${url}: ${error.message}`
     };
   }
 }
