@@ -12,8 +12,21 @@ const BRAVE_API_KEY = process.env.BRAVE_API_KEY || 'BSAcz5U2xM27VNzkhVmvBlDiSiA1
 // Knowledge Base path - SparkRAG folder
 const KB_PATH = process.env.SPARKRAG_PATH || path.join(os.homedir(), 'Documents', 'Brain Vault', 'SecondBrain', 'SparkRAG');
 
-// Assistants data path
-const ASSISTANTS_PATH = path.join(__dirname, 'data', 'assistants.json');
+// Assistants data path - use app.getPath for writable location
+const ASSISTANTS_PATH = app.isPackaged 
+  ? path.join(app.getPath('userData'), 'assistants.json')
+  : path.join(__dirname, 'data', 'assistants.json');
+
+// Copy default assistants on first run
+function initAssistants() {
+  if (app.isPackaged && !fs.existsSync(ASSISTANTS_PATH)) {
+    const defaultPath = path.join(process.resourcesPath, 'app.asar', 'data', 'assistants.json');
+    if (fs.existsSync(defaultPath)) {
+      const defaultData = fs.readFileSync(defaultPath, 'utf-8');
+      fs.writeFileSync(ASSISTANTS_PATH, defaultData);
+    }
+  }
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -40,7 +53,10 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  initAssistants();
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -300,8 +316,19 @@ ipcMain.handle('check-connection', async () => {
 // Get all assistants
 ipcMain.handle('get-assistants', async () => {
   try {
+    initAssistants(); // Ensure file exists
     if (!fs.existsSync(ASSISTANTS_PATH)) {
-      return [];
+      // Return default if no file
+      return [
+        {
+          id: "asst_default",
+          name: "Spark (Default)",
+          description: "General-purpose AI assistant",
+          prompt: "You are Spark, a helpful AI assistant running on a local NVIDIA Jetson system. Be concise but thorough.",
+          createdBy: "system",
+          createdAt: new Date().toISOString()
+        }
+      ];
     }
     const data = fs.readFileSync(ASSISTANTS_PATH, 'utf-8');
     return JSON.parse(data);
