@@ -446,15 +446,15 @@ ipcMain.handle('kb-open-finder', async () => {
   return { success: true };
 });
 
-// Handle dropped files/folders with PDF conversion
+// Handle dropped files/folders - convert ALL to markdown
 ipcMain.handle('kb-handle-drop', async (event, droppedPaths, targetFolder) => {
   const results = [];
   const pdfParse = require('pdf-parse');
+  const mammoth = require('mammoth');
   
   for (const sourcePath of droppedPaths) {
     try {
       const fileName = path.basename(sourcePath);
-      const ext = path.extname(sourcePath).toLowerCase();
       
       // Check if source exists
       if (!fs.existsSync(sourcePath)) {
@@ -465,37 +465,14 @@ ipcMain.handle('kb-handle-drop', async (event, droppedPaths, targetFolder) => {
       const stats = fs.statSync(sourcePath);
       
       if (stats.isDirectory()) {
-        // Copy directory recursively, converting PDFs
+        // Process directory recursively
         const destPath = path.join(KB_PATH, targetFolder || '', fileName);
-        await copyDirWithConversion(sourcePath, destPath, pdfParse);
-        results.push({ path: sourcePath, success: true, type: 'folder', name: fileName });
-      } else if (ext === '.pdf') {
-        // Convert PDF to markdown
-        const mdFileName = fileName.replace('.pdf', '.md');
-        const destPath = path.join(KB_PATH, targetFolder || '', mdFileName);
-        
-        const dataBuffer = fs.readFileSync(sourcePath);
-        const pdfData = await pdfParse(dataBuffer);
-        
-        // Create markdown with metadata
-        const mdContent = `# ${fileName.replace('.pdf', '')}\n\n` +
-          `*Converted from PDF on ${new Date().toLocaleDateString()}*\n\n` +
-          `---\n\n${pdfData.text}`;
-        
-        fs.writeFileSync(destPath, mdContent, 'utf-8');
-        results.push({ 
-          path: sourcePath, 
-          success: true, 
-          type: 'file', 
-          name: mdFileName,
-          converted: true,
-          originalName: fileName
-        });
+        const converted = await convertDirToMarkdown(sourcePath, destPath, pdfParse, mammoth);
+        results.push({ path: sourcePath, success: true, type: 'folder', name: fileName, converted: converted });
       } else {
-        // Copy other files as-is
-        const destPath = path.join(KB_PATH, targetFolder || '', fileName);
-        fs.copyFileSync(sourcePath, destPath);
-        results.push({ path: sourcePath, success: true, type: 'file', name: fileName });
+        // Convert single file
+        const result = await convertFileToMarkdown(sourcePath, targetFolder, pdfParse, mammoth);
+        results.push(result);
       }
     } catch (error) {
       results.push({ path: sourcePath, success: false, error: error.message });
@@ -505,39 +482,117 @@ ipcMain.handle('kb-handle-drop', async (event, droppedPaths, targetFolder) => {
   return results;
 });
 
-// Helper: Copy directory recursively with PDF conversion
-async function copyDirWithConversion(src, dest, pdfParse) {
+// Convert a single file to markdown
+async function convertFileToMarkdown(sourcePath, targetFolder, pdfParse, mammoth) {
+  const fileName = path.basename(sourcePath);
+  const ext = path.extname(sourcePath).toLowerCase();
+  const baseName = fileName.replace(/\.[^.]+$/, '');
+  const mdFileName = baseName + '.md';
+  const destPath = path.join(KB_PATH, targetFolder || '', mdFileName);
+  const date = new Date().toLocaleDateString();
+  
+  let content = '';
+  let converted = true;
+  
+  try {
+    if (ext === '.pdf') {
+      // PDF conversion
+      const dataBuffer = fs.readFileSync(sourcePath);
+      const pdfData = await pdfParse(dataBuffer);
+      content = `# ${baseName}\n\n*Converted from PDF on ${date}*\n\n---\n\n${pdfData.text}`;
+      
+    } else if (ext === '.docx') {
+      // Word document conversion
+      const result = await mammoth.extractRawText({ path: sourcePath });
+      content = `# ${baseName}\n\n*Converted from DOCX on ${date}*\n\n---\n\n${result.value}`;
+      
+    } else if (ext === '.doc') {
+      // Old Word format - try mammoth, may not work perfectly
+      try {
+        const result = await mammoth.extractRawText({ path: sourcePath });
+        content = `# ${baseName}\n\n*Converted from DOC on ${date}*\n\n---\n\n${result.value}`;
+      } catch {
+        return { path: sourcePath, success: false, error: 'DOC format not fully supported' };
+      }
+      
+    } else if (ext === '.txt') {
+      // Plain text - wrap in markdown
+      const text = fs.readFileSync(sourcePath, 'utf-8');
+      content = `# ${baseName}\n\n*Converted from TXT on ${date}*\n\n---\n\n${text}`;
+      
+    } else if (ext === '.rtf') {
+      // RTF - strip formatting, keep text
+      const rtfText = fs.readFileSync(sourcePath, 'utf-8');
+      const plainText = rtfText.replace(/\{\\[^{}]+\}|\\[a-z]+\d* ?/gi, '').replace(/[{}]/g, '');
+      content = `# ${baseName}\n\n*Converted from RTF on ${date}*\n\n---\n\n${plainText}`;
+      
+    } else if (ext === '.md') {
+      // Already markdown - just copy
+      fs.copyFileSync(sourcePath, destPath);
+      return { path: sourcePath, success: true, type: 'file', name: mdFileName, converted: false };
+      
+    } else if (['.html', '.htm'].includes(ext)) {
+      // HTML - strip tags
+      const html = fs.readFileSync(sourcePath, 'utf-8');
+      const text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+                       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                       .replace(/<[^>]+>/g, '\n')
+                       .replace(/\n\s*\n/g, '\n\n')
+                       .trim();
+      content = `# ${baseName}\n\n*Converted from HTML on ${date}*\n\n---\n\n${text}`;
+      
+    } else if (['.json', '.xml', '.csv'].includes(ext)) {
+      // Data files - wrap as code block
+      const data = fs.readFileSync(sourcePath, 'utf-8');
+      content = `# ${baseName}\n\n*Converted from ${ext.toUpperCase().slice(1)} on ${date}*\n\n---\n\n\`\`\`${ext.slice(1)}\n${data}\n\`\`\``;
+      
+    } else {
+      // Unsupported - skip
+      return { path: sourcePath, success: false, error: `Unsupported file type: ${ext}` };
+    }
+    
+    // Ensure directory exists
+    const destDir = path.dirname(destPath);
+    if (!fs.existsSync(destDir)) {
+      fs.mkdirSync(destDir, { recursive: true });
+    }
+    
+    fs.writeFileSync(destPath, content, 'utf-8');
+    return { 
+      path: sourcePath, 
+      success: true, 
+      type: 'file', 
+      name: mdFileName, 
+      converted: converted,
+      originalName: fileName 
+    };
+    
+  } catch (error) {
+    return { path: sourcePath, success: false, error: error.message };
+  }
+}
+
+// Convert directory recursively - only keep markdown files
+async function convertDirToMarkdown(src, dest, pdfParse, mammoth) {
   fs.mkdirSync(dest, { recursive: true });
   const entries = fs.readdirSync(src, { withFileTypes: true });
+  let convertedCount = 0;
   
   for (const entry of entries) {
     const srcPath = path.join(src, entry.name);
-    const ext = path.extname(entry.name).toLowerCase();
     
     if (entry.isDirectory()) {
-      await copyDirWithConversion(srcPath, path.join(dest, entry.name), pdfParse);
-    } else if (ext === '.pdf') {
-      // Convert PDF to markdown
-      try {
-        const mdFileName = entry.name.replace('.pdf', '.md');
-        const destPath = path.join(dest, mdFileName);
-        
-        const dataBuffer = fs.readFileSync(srcPath);
-        const pdfData = await pdfParse(dataBuffer);
-        
-        const mdContent = `# ${entry.name.replace('.pdf', '')}\n\n` +
-          `*Converted from PDF on ${new Date().toLocaleDateString()}*\n\n` +
-          `---\n\n${pdfData.text}`;
-        
-        fs.writeFileSync(destPath, mdContent, 'utf-8');
-      } catch (e) {
-        // If conversion fails, copy as-is
-        fs.copyFileSync(srcPath, path.join(dest, entry.name));
-      }
+      const subConverted = await convertDirToMarkdown(srcPath, path.join(dest, entry.name), pdfParse, mammoth);
+      convertedCount += subConverted;
     } else {
-      fs.copyFileSync(srcPath, path.join(dest, entry.name));
+      const result = await convertFileToMarkdown(srcPath, path.relative(KB_PATH, dest), pdfParse, mammoth);
+      if (result.success && result.converted) {
+        convertedCount++;
+      }
     }
   }
+  
+  return convertedCount;
 }
 
 // Helper: Copy directory recursively

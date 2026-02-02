@@ -16,6 +16,7 @@
     "electron-builder": "^24.9.1"
   },
   "dependencies": {
+    "mammoth": "^1.11.0",
     "marked": "^11.0.0",
     "pdf-parse": "^2.4.5"
   },
