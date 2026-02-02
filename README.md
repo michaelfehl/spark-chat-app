@@ -69,7 +69,6 @@ npm run build
 
 <!-- SHORTCUTS: Available keyboard shortcuts for common actions -->
 - `⌘ + Enter` - Send message
-- `⌘ + N` - New conversation (clear)
 
 ## Configuration
 
