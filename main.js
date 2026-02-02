@@ -4,6 +4,7 @@ const fs = require('fs');
 const os = require('os');
 
 let mainWindow;
+let kbWindow = null;
 
 // Brave Search API key (get free key at https://brave.com/search/api/)
 const BRAVE_API_KEY = process.env.BRAVE_API_KEY || 'BSAcz5U2xM27VNzkhVmvBlDiSiA1F8a';
@@ -442,5 +443,56 @@ ipcMain.handle('kb-save-file', async (event, relativePath, content) => {
 ipcMain.handle('kb-open-finder', async () => {
   const { shell } = require('electron');
   shell.openPath(KB_PATH);
+  return { success: true };
+});
+
+// Open KB browser window
+ipcMain.handle('kb-open-window', async (event, selectedFiles) => {
+  if (kbWindow && !kbWindow.isDestroyed()) {
+    kbWindow.focus();
+    return { success: true };
+  }
+  
+  kbWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    minWidth: 500,
+    minHeight: 400,
+    parent: mainWindow,
+    title: 'Knowledge Base Browser',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    },
+    backgroundColor: '#1a1a2e'
+  });
+  
+  kbWindow.loadFile('renderer/kb-browser.html');
+  
+  // Send initial selected files
+  kbWindow.webContents.once('did-finish-load', () => {
+    kbWindow.webContents.send('init-selection', selectedFiles || []);
+  });
+  
+  kbWindow.on('closed', () => {
+    kbWindow = null;
+  });
+  
+  return { success: true };
+});
+
+// Send selection back to main window
+ipcMain.on('kb-selection-changed', (event, selectedFiles) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('kb-selection-update', selectedFiles);
+  }
+});
+
+// Close KB window
+ipcMain.handle('kb-close-window', async () => {
+  if (kbWindow && !kbWindow.isDestroyed()) {
+    kbWindow.close();
+  }
   return { success: true };
 });

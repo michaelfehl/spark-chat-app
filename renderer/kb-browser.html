@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <title>Knowledge Base Browser</title>
+  <link rel="stylesheet" href="kb-browser.css">
+</head>
+<body>
+  <div class="kb-browser">
+    <div class="kb-toolbar">
+      <div class="kb-toolbar-left">
+        <button class="tool-btn" id="newFolderBtn" title="New Folder">📁+ New Folder</button>
+        <button class="tool-btn" id="newFileBtn" title="New File">📄+ New File</button>
+        <button class="tool-btn" id="openFinderBtn" title="Open in Finder">📂 Open Folder</button>
+      </div>
+      <div class="kb-toolbar-right">
+        <span class="selection-count" id="selectionCount">0 files selected</span>
+        <button class="tool-btn primary" id="applyBtn">✓ Apply Selection</button>
+      </div>
+    </div>
+    
+    <div class="kb-content">
+      <div class="kb-sidebar">
+        <div class="kb-path" id="kbPath">Loading...</div>
+        <div class="folder-tree" id="folderTree"></div>
+      </div>
+      
+      <div class="kb-main">
+        <div class="file-grid" id="fileGrid">
+          <div class="loading">Loading knowledge base...</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="kb-footer">
+      <div class="selected-files" id="selectedFiles">
+        <span class="footer-label">Selected:</span>
+        <div class="selected-tags" id="selectedTags"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for input -->
+  <div class="modal hidden" id="modal">
+    <div class="modal-content">
+      <div class="modal-header" id="modalHeader">New Folder</div>
+      <input type="text" class="modal-input" id="modalInput" placeholder="Name">
+      <div class="modal-actions">
+        <button class="modal-btn cancel" id="modalCancel">Cancel</button>
+        <button class="modal-btn confirm" id="modalConfirm">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Context Menu -->
+  <div class="context-menu hidden" id="contextMenu">
+    <button class="context-item" data-action="rename">✏️ Rename</button>
+    <button class="context-item" data-action="delete">🗑️ Delete</button>
+  </div>
+
+  <script src="kb-browser.js"></script>
+</body>
+</html>

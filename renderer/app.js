@@ -169,10 +169,17 @@ function updateKBSelectedCount() {
   kbToggleBtn.textContent = count > 0 ? `📚 KB (${count})` : '📚 KB';
 }
 
-// Toggle KB panel
+// Toggle KB panel - now opens separate window
 function toggleKBPanel() {
-  kbPanel.classList.toggle('hidden');
+  // Open the dedicated KB browser window
+  window.sparkAPI.kbOpenWindow([...selectedKBFiles]);
 }
+
+// Listen for selection updates from KB browser window
+window.sparkAPI.onKBSelectionUpdate((files) => {
+  selectedKBFiles = new Set(files);
+  updateKBSelectedCount();
+});
 
 // Show context menu
 function showContextMenu(e, item) {

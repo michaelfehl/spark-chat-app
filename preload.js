@@ -31,5 +31,19 @@ contextBridge.exposeInMainWorld('sparkAPI', {
   kbSaveFile: (path, content) =>
     ipcRenderer.invoke('kb-save-file', path, content),
   kbOpenFinder: () =>
-    ipcRenderer.invoke('kb-open-finder')
+    ipcRenderer.invoke('kb-open-finder'),
+  
+  // KB Browser Window
+  kbOpenWindow: (selectedFiles) =>
+    ipcRenderer.invoke('kb-open-window', selectedFiles),
+  kbCloseWindow: () =>
+    ipcRenderer.invoke('kb-close-window'),
+  kbSendSelection: (selectedFiles) =>
+    ipcRenderer.send('kb-selection-changed', selectedFiles),
+  
+  // Event listeners
+  onKBSelectionUpdate: (callback) =>
+    ipcRenderer.on('kb-selection-update', (event, files) => callback(files)),
+  onInitSelection: (callback) =>
+    ipcRenderer.on('init-selection', (event, files) => callback(files))
 });
