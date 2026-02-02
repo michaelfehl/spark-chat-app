@@ -596,7 +596,7 @@ function clearChat() {
   conversationHistory = [];
   messagesContainer.innerHTML = `
     <div class="welcome-message">
-      <div class="welcome-icon">⚡</div>
+      <img src="../assets/icon.png" class="welcome-icon-img" alt="">
       <h2>Welcome to Spark Chat</h2>
       <p>Chat with Spark LLM running on your local network via Tailscale.</p>
       <p class="hint">Make sure Tailscale is connected to reach spark1 (100.86.36.112)</p>
