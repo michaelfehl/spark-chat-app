@@ -108,9 +108,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const successCount = results.filter(r => r.success).length;
     const failCount = results.filter(r => !r.success).length;
+    const convertedCount = results.filter(r => r.converted).length;
     
     if (failCount === 0) {
-      showToast(`✓ Uploaded ${successCount} item${successCount > 1 ? 's' : ''}`, 'success');
+      let msg = `✓ Uploaded ${successCount} item${successCount > 1 ? 's' : ''}`;
+      if (convertedCount > 0) {
+        msg += ` (${convertedCount} PDF${convertedCount > 1 ? 's' : ''} → MD)`;
+      }
+      showToast(msg, 'success');
     } else if (successCount === 0) {
       showToast(`✗ Failed to upload files`, 'error');
     } else {

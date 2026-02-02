@@ -446,14 +446,15 @@ ipcMain.handle('kb-open-finder', async () => {
   return { success: true };
 });
 
-// Handle dropped files/folders
+// Handle dropped files/folders with PDF conversion
 ipcMain.handle('kb-handle-drop', async (event, droppedPaths, targetFolder) => {
   const results = [];
+  const pdfParse = require('pdf-parse');
   
   for (const sourcePath of droppedPaths) {
     try {
       const fileName = path.basename(sourcePath);
-      const destPath = path.join(KB_PATH, targetFolder || '', fileName);
+      const ext = path.extname(sourcePath).toLowerCase();
       
       // Check if source exists
       if (!fs.existsSync(sourcePath)) {
@@ -464,11 +465,35 @@ ipcMain.handle('kb-handle-drop', async (event, droppedPaths, targetFolder) => {
       const stats = fs.statSync(sourcePath);
       
       if (stats.isDirectory()) {
-        // Copy directory recursively
-        copyDirSync(sourcePath, destPath);
+        // Copy directory recursively, converting PDFs
+        const destPath = path.join(KB_PATH, targetFolder || '', fileName);
+        await copyDirWithConversion(sourcePath, destPath, pdfParse);
         results.push({ path: sourcePath, success: true, type: 'folder', name: fileName });
+      } else if (ext === '.pdf') {
+        // Convert PDF to markdown
+        const mdFileName = fileName.replace('.pdf', '.md');
+        const destPath = path.join(KB_PATH, targetFolder || '', mdFileName);
+        
+        const dataBuffer = fs.readFileSync(sourcePath);
+        const pdfData = await pdfParse(dataBuffer);
+        
+        // Create markdown with metadata
+        const mdContent = `# ${fileName.replace('.pdf', '')}\n\n` +
+          `*Converted from PDF on ${new Date().toLocaleDateString()}*\n\n` +
+          `---\n\n${pdfData.text}`;
+        
+        fs.writeFileSync(destPath, mdContent, 'utf-8');
+        results.push({ 
+          path: sourcePath, 
+          success: true, 
+          type: 'file', 
+          name: mdFileName,
+          converted: true,
+          originalName: fileName
+        });
       } else {
-        // Copy file
+        // Copy other files as-is
+        const destPath = path.join(KB_PATH, targetFolder || '', fileName);
         fs.copyFileSync(sourcePath, destPath);
         results.push({ path: sourcePath, success: true, type: 'file', name: fileName });
       }
@@ -479,6 +504,41 @@ ipcMain.handle('kb-handle-drop', async (event, droppedPaths, targetFolder) => {
   
   return results;
 });
+
+// Helper: Copy directory recursively with PDF conversion
+async function copyDirWithConversion(src, dest, pdfParse) {
+  fs.mkdirSync(dest, { recursive: true });
+  const entries = fs.readdirSync(src, { withFileTypes: true });
+  
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const ext = path.extname(entry.name).toLowerCase();
+    
+    if (entry.isDirectory()) {
+      await copyDirWithConversion(srcPath, path.join(dest, entry.name), pdfParse);
+    } else if (ext === '.pdf') {
+      // Convert PDF to markdown
+      try {
+        const mdFileName = entry.name.replace('.pdf', '.md');
+        const destPath = path.join(dest, mdFileName);
+        
+        const dataBuffer = fs.readFileSync(srcPath);
+        const pdfData = await pdfParse(dataBuffer);
+        
+        const mdContent = `# ${entry.name.replace('.pdf', '')}\n\n` +
+          `*Converted from PDF on ${new Date().toLocaleDateString()}*\n\n` +
+          `---\n\n${pdfData.text}`;
+        
+        fs.writeFileSync(destPath, mdContent, 'utf-8');
+      } catch (e) {
+        // If conversion fails, copy as-is
+        fs.copyFileSync(srcPath, path.join(dest, entry.name));
+      }
+    } else {
+      fs.copyFileSync(srcPath, path.join(dest, entry.name));
+    }
+  }
+}
 
 // Helper: Copy directory recursively
 function copyDirSync(src, dest) {
