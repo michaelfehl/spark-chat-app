@@ -7,7 +7,7 @@ let mainWindow;
 let kbWindow = null;
 
 // Brave Search API key (get free key at https://brave.com/search/api/)
-const BRAVE_API_KEY = process.env.BRAVE_API_KEY || 'BSAcz5U2xM27VNzkhVmvBlDiSiA1F8a';
+const BRAVE_API_KEY = process.env.BRAVE_API_KEY || 'BSAwPklB-4RtpmYsaAdukW1XOqyLTBK';
 
 // Spark API URL for agents and KB
 const SPARK_API_URL = 'http://100.86.36.112:30001';
