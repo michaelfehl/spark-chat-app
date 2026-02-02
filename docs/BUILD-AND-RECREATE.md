@@ -1,11 +1,14 @@
 # Spark Chat — Build and Full Recreation Guide
 
+<!-- DOCUMENT PURPOSE: Step-by-step guide to recreate the entire Spark Chat application from scratch, useful for setting up on a new machine or rebuilding without the original repository -->
+
 This guide lets you **recreate the entire application from scratch**: prerequisites, project setup, and every file you need with a short description of its role. Use it to rebuild the app on a new machine or from zero.
 
 ---
 
 ## Prerequisites
 
+<!-- PREREQUISITES: System requirements and tools needed before starting the project setup -->
 - **Node.js** 18+ (LTS recommended)
 - **npm** (comes with Node)
 - **macOS** 11+ (for building the macOS app; Electron runs on other platforms but the app is tailored for macOS)
@@ -15,6 +18,7 @@ This guide lets you **recreate the entire application from scratch**: prerequisi
 
 ## Step 1: Project scaffold
 
+<!-- STEP 1: Initialize a new Node.js project and create the basic directory structure -->
 ```bash
 mkdir spark-chat-app
 cd spark-chat-app
@@ -32,6 +36,7 @@ touch assets/.gitkeep
 
 ## Step 2: package.json
 
+<!-- STEP 2: Configure dependencies, scripts, and electron-builder settings for the project -->
 Create or replace `package.json` with:
 
 ```json
@@ -96,6 +101,7 @@ npm install
 
 ## Step 3: .gitignore
 
+<!-- STEP 3: Configure Git to ignore build artifacts, dependencies, and temporary files -->
 Create `.gitignore`:
 
 ```
@@ -112,6 +118,7 @@ npm-debug.log*
 
 ## Step 4: Main process — main.js
 
+<!-- STEP 4: Create the Electron main process that handles windows, IPC, network requests, and file operations -->
 Create `main.js` at the project root. It must:
 
 1. Require: `electron` (app, BrowserWindow, ipcMain, dialog), `path`, `fs`, `os`.
@@ -166,6 +173,7 @@ Create `preload.js` at the project root. Use `contextBridge.exposeInMainWorld('s
 
 ## Step 7: Renderer — KB browser window
 
+<!-- STEP 7: Create the Knowledge Base browser window for managing and selecting files -->
 - **renderer/kb-browser.html**  
   - Same CSP as index. Title “Knowledge Base Browser”. Link `kb-browser.css`. Body: toolbar (new folder/file, open Finder, selection count, Apply), sidebar (path, folder tree), main (drop overlay, file grid), footer (selected tags), modal, context menu. Script: `kb-browser.js`.
 
@@ -179,11 +187,12 @@ Create `preload.js` at the project root. Use `contextBridge.exposeInMainWorld('s
 
 ## Step 8: Data and assets
 
+<!-- STEP 8: Set up default assistant definitions and application icons -->
 - **data/assistants.json**  
   - JSON array of assistant objects. Each: `id`, `name`, `description`, `prompt`, `createdBy`, `createdAt`. Include at least one default, e.g. id `asst_default`, name “Spark (Default)”. See repo `data/assistants.json` for schema and example.
 
 - **assets/icon.png**  
-  - PNG icon (e.g. 256×256 or 512×512) used in development and in the titlebar/welcome area. Create or copy from repo.
+  - PNG icon (e.g. 256×256 or 512×512) used in development and in the titlebar/welcome area. Create or copy from repo. Recommended minimum size: 512×512 pixels for best quality.
 
 - **assets/icon.icns**  
   - macOS app icon set for the built .app. Generate from icon.png (e.g. with `iconutil` or an online converter) or copy from repo.
@@ -192,6 +201,7 @@ Create `preload.js` at the project root. Use `contextBridge.exposeInMainWorld('s
 
 ## Step 9: Verify run and build
 
+<!-- STEP 9: Test the application in development mode and build distributable packages -->
 ```bash
 npm start
 ```
@@ -214,6 +224,7 @@ Output is under `dist/`. Install the .app or DMG and run Spark Chat from Applica
 
 ## Step 10: Optional — Environment and config
 
+<!-- STEP 10: Customize URLs, paths, and API keys for different environments or backends -->
 - **Spark URL**: Edit `main.js` and change the `SPARK_URL` (and models URL) if your backend is different.
 - **Knowledge Base path**: Set `SPARKRAG_PATH` in the environment or change `KB_PATH` in `main.js`.
 - **Brave API**: Used only if you add Brave search; currently web search uses DuckDuckGo and direct news URLs. Set `BRAVE_API_KEY` in env if you use it.
@@ -222,6 +233,7 @@ Output is under `dist/`. Install the .app or DMG and run Spark Chat from Applica
 
 ## File checklist (recreation)
 
+<!-- FILE CHECKLIST: Complete list of all files needed to recreate the application with their purposes -->
 | Path | Purpose |
 |------|--------|
 | `package.json` | Dependencies, scripts, electron-builder config |

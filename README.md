@@ -1,11 +1,13 @@
 # ⚡ Spark Chat
 
+<!-- PROJECT OVERVIEW: Brief description of what Spark Chat is and its main purpose -->
 A native macOS desktop application for chatting with Spark LLM via Tailscale.
 
 ![Spark Chat Screenshot](docs/screenshot.png)
 
 ## Features
 
+<!-- FEATURES: Key capabilities and functionality of the application -->
 - 💬 **Native macOS App** - Runs from /Applications folder
 - 🔗 **Tailscale Connection** - Connects to Spark at 100.86.36.112:30000
 - 🌐 **Translation** - Translate to German or English (Off / 🇩🇪 / 🇺🇸)
@@ -16,12 +18,14 @@ A native macOS desktop application for chatting with Spark LLM via Tailscale.
 
 ## Requirements
 
+<!-- REQUIREMENTS: System and network prerequisites needed to run the application -->
 - macOS 11.0 or later
 - [Tailscale](https://tailscale.com) connected to the network
 - Access to spark1 (100.86.36.112)
 
 ## Installation
 
+<!-- INSTALLATION: Instructions for installing the app via DMG or building from source -->
 ### From DMG (Recommended)
 1. Download the latest release from [Releases](../../releases)
 2. Open the DMG file
@@ -46,6 +50,7 @@ npm run build
 
 ## Usage
 
+<!-- USAGE: Quick start guide for using the application -->
 1. Ensure Tailscale is connected
 2. Launch Spark Chat
 3. Wait for "Connected" status (green dot)
@@ -53,6 +58,7 @@ npm run build
 
 ### Options
 
+<!-- OPTIONS: Available settings and toggles for customizing chat behavior -->
 - **🌐 Translation** - Off (normal chat), Translate to German (🇩🇪), or Translate to English (🇺🇸)
 - **📚 Knowledge Base** - Includes CCSA policies/procedures context
 - **🔍 Web Search** - Enables web-augmented responses (on by default)
@@ -61,11 +67,13 @@ npm run build
 
 ### Keyboard Shortcuts
 
+<!-- SHORTCUTS: Available keyboard shortcuts for common actions -->
 - `⌘ + Enter` - Send message
 - `⌘ + N` - New conversation (clear)
 
 ## Configuration
 
+<!-- CONFIGURATION: How to customize the Spark server endpoint -->
 The app connects to Spark at:
 ```
 http://100.86.36.112:30000/v1/chat/completions
@@ -78,6 +86,7 @@ const SPARK_URL = 'http://your-spark-url:port/v1/chat/completions';
 
 ## Development
 
+<!-- DEVELOPMENT: Commands for developing and building the application -->
 ```bash
 # Install dependencies
 npm install
@@ -92,12 +101,14 @@ npm run build:app  # Creates .app bundle only
 
 ## Tech Stack
 
+<!-- TECH STACK: Technologies and frameworks used to build the application -->
 - [Electron](https://www.electronjs.org/) - Cross-platform desktop framework
 - [electron-builder](https://www.electron.build/) - Build and package
 - Native macOS styling with CSS
 
 ## Network Architecture
 
+<!-- NETWORK ARCHITECTURE: Visual representation of how the app connects to the Spark server via Tailscale -->
 ```
 ┌──────────────┐     Tailscale     ┌──────────────┐
 │  Spark Chat  │ ───────────────── │   spark1     │
@@ -108,6 +119,7 @@ npm run build:app  # Creates .app bundle only
 
 ## Documentation
 
+<!-- DOCUMENTATION: Links to detailed documentation files for various aspects of the application -->
 Full documentation is in the `docs/` folder for building, using, and recreating the app:
 
 | Document | Description |
@@ -121,8 +133,11 @@ Use **BUILD-AND-RECREATE.md** if you need to rebuild the app from zero (e.g. on 
 
 ## License
 
+<!-- LICENSE: Legal terms under which this software is distributed -->
+
 MIT
 
 ## Author
 
+<!-- AUTHOR: Organization responsible for creating and maintaining this application -->
 CCS Associates
