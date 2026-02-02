@@ -6,5 +6,7 @@ contextBridge.exposeInMainWorld('sparkAPI', {
   selectFile: () => 
     ipcRenderer.invoke('select-file'),
   checkConnection: () => 
-    ipcRenderer.invoke('check-connection')
+    ipcRenderer.invoke('check-connection'),
+  webSearch: (query) =>
+    ipcRenderer.invoke('web-search', query)
 });

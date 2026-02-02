@@ -113,8 +113,8 @@ async function sendMessage() {
     content: userMessage
   });
   
-  // Show typing indicator
-  const typingIndicator = addTypingIndicator();
+  // Show typing indicator with search status
+  const typingIndicator = addTypingIndicator(webSearchToggle.checked);
   
   // Build system prompt based on options
   let systemPrompt = 'You are Spark, a helpful AI assistant running on a local NVIDIA Jetson system. Be concise but thorough.';
@@ -183,10 +183,16 @@ function addMessage(content, type) {
 }
 
 // Add typing indicator
-function addTypingIndicator() {
+function addTypingIndicator(withSearch = false) {
   const indicator = document.createElement('div');
   indicator.className = 'message assistant typing-indicator';
-  indicator.innerHTML = '<span></span><span></span><span></span>';
+  
+  if (withSearch) {
+    indicator.innerHTML = '<span class="search-label">🔍 Searching web...</span><span></span><span></span><span></span>';
+  } else {
+    indicator.innerHTML = '<span></span><span></span><span></span>';
+  }
+  
   messagesContainer.appendChild(indicator);
   scrollToBottom();
   return indicator;
