@@ -364,3 +364,83 @@ ipcMain.handle('read-kb-files', async (event, filePaths) => {
   
   return contents;
 });
+
+// Create new folder in KB
+ipcMain.handle('kb-create-folder', async (event, relativePath) => {
+  try {
+    const fullPath = path.join(KB_PATH, relativePath);
+    fs.mkdirSync(fullPath, { recursive: true });
+    return { success: true, path: relativePath };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Delete file or folder from KB
+ipcMain.handle('kb-delete', async (event, relativePath) => {
+  try {
+    const fullPath = path.join(KB_PATH, relativePath);
+    const stats = fs.statSync(fullPath);
+    
+    if (stats.isDirectory()) {
+      fs.rmSync(fullPath, { recursive: true });
+    } else {
+      fs.unlinkSync(fullPath);
+    }
+    
+    return { success: true, path: relativePath };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Rename file or folder in KB
+ipcMain.handle('kb-rename', async (event, oldPath, newName) => {
+  try {
+    const oldFullPath = path.join(KB_PATH, oldPath);
+    const parentDir = path.dirname(oldFullPath);
+    const newFullPath = path.join(parentDir, newName);
+    
+    fs.renameSync(oldFullPath, newFullPath);
+    
+    const newRelativePath = path.join(path.dirname(oldPath), newName);
+    return { success: true, oldPath, newPath: newRelativePath };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Create new file in KB
+ipcMain.handle('kb-create-file', async (event, relativePath, content = '') => {
+  try {
+    const fullPath = path.join(KB_PATH, relativePath);
+    const dir = path.dirname(fullPath);
+    
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    
+    fs.writeFileSync(fullPath, content, 'utf-8');
+    return { success: true, path: relativePath };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Save/update file content in KB
+ipcMain.handle('kb-save-file', async (event, relativePath, content) => {
+  try {
+    const fullPath = path.join(KB_PATH, relativePath);
+    fs.writeFileSync(fullPath, content, 'utf-8');
+    return { success: true, path: relativePath };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Open KB folder in Finder
+ipcMain.handle('kb-open-finder', async () => {
+  const { shell } = require('electron');
+  shell.openPath(KB_PATH);
+  return { success: true };
+});

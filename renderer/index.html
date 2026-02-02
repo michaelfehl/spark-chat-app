@@ -37,12 +37,35 @@
       <div class="kb-panel hidden" id="kbPanel">
         <div class="kb-header">
           <span>📚 Knowledge Base Files</span>
-          <button class="kb-close" id="kbClose">✕</button>
+          <div class="kb-header-actions">
+            <button class="kb-action-btn" id="kbNewFolder" title="New Folder">📁+</button>
+            <button class="kb-action-btn" id="kbNewFile" title="New File">📄+</button>
+            <button class="kb-action-btn" id="kbOpenFinder" title="Open in Finder">📂</button>
+            <button class="kb-close" id="kbClose">✕</button>
+          </div>
         </div>
         <div class="kb-path" id="kbPath"></div>
         <div class="kb-tree" id="kbTree"></div>
         <div class="kb-selected" id="kbSelected">
           <span class="kb-selected-count">0 files selected</span>
+        </div>
+      </div>
+
+      <!-- Context Menu -->
+      <div class="kb-context-menu hidden" id="kbContextMenu">
+        <button class="context-item" data-action="rename">✏️ Rename</button>
+        <button class="context-item" data-action="delete">🗑️ Delete</button>
+      </div>
+
+      <!-- Modal for input -->
+      <div class="modal hidden" id="kbModal">
+        <div class="modal-content">
+          <div class="modal-header" id="modalHeader">New Folder</div>
+          <input type="text" class="modal-input" id="modalInput" placeholder="Name">
+          <div class="modal-actions">
+            <button class="modal-btn cancel" id="modalCancel">Cancel</button>
+            <button class="modal-btn confirm" id="modalConfirm">Create</button>
+          </div>
         </div>
       </div>
 

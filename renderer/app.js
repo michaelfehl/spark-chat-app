@@ -15,6 +15,15 @@ const kbClose = document.getElementById('kbClose');
 const kbTree = document.getElementById('kbTree');
 const kbPath = document.getElementById('kbPath');
 const kbSelected = document.getElementById('kbSelected');
+const kbNewFolder = document.getElementById('kbNewFolder');
+const kbNewFile = document.getElementById('kbNewFile');
+const kbOpenFinder = document.getElementById('kbOpenFinder');
+const kbContextMenu = document.getElementById('kbContextMenu');
+const kbModal = document.getElementById('kbModal');
+const modalHeader = document.getElementById('modalHeader');
+const modalInput = document.getElementById('modalInput');
+const modalCancel = document.getElementById('modalCancel');
+const modalConfirm = document.getElementById('modalConfirm');
 
 // State
 let conversationHistory = [];
@@ -22,6 +31,8 @@ let uploadedFile = null;
 let isConnected = false;
 let selectedKBFiles = new Set();
 let kbStructure = null;
+let contextTarget = null; // Current item for context menu
+let modalAction = null; // Current modal action
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -40,6 +51,26 @@ document.addEventListener('DOMContentLoaded', () => {
   // Knowledge Base handlers
   kbToggleBtn.addEventListener('click', toggleKBPanel);
   kbClose.addEventListener('click', () => kbPanel.classList.add('hidden'));
+  kbNewFolder.addEventListener('click', () => showModal('newFolder'));
+  kbNewFile.addEventListener('click', () => showModal('newFile'));
+  kbOpenFinder.addEventListener('click', () => window.sparkAPI.kbOpenFinder());
+  
+  // Modal handlers
+  modalCancel.addEventListener('click', hideModal);
+  modalConfirm.addEventListener('click', handleModalConfirm);
+  modalInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') handleModalConfirm();
+    if (e.key === 'Escape') hideModal();
+  });
+  
+  // Context menu handlers
+  document.addEventListener('click', () => hideContextMenu());
+  kbContextMenu.querySelectorAll('.context-item').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleContextAction(btn.dataset.action);
+    });
+  });
   
   // Load KB structure
   loadKnowledgeBase();
@@ -75,9 +106,13 @@ function renderKBTree(items, container) {
         <div class="kb-folder-children"></div>
       `;
       
-      folder.querySelector('.kb-folder-header').addEventListener('click', () => {
+      const header = folder.querySelector('.kb-folder-header');
+      header.addEventListener('click', () => {
         folder.classList.toggle('expanded');
       });
+      
+      // Right-click for context menu
+      header.addEventListener('contextmenu', (e) => showContextMenu(e, item));
       
       if (item.children && item.children.length > 0) {
         renderKBTree(item.children, folder.querySelector('.kb-folder-children'));
@@ -94,6 +129,9 @@ function renderKBTree(items, container) {
       `;
       
       file.addEventListener('click', () => toggleFileSelection(file, item.path));
+      
+      // Right-click for context menu
+      file.addEventListener('contextmenu', (e) => showContextMenu(e, item));
       
       if (selectedKBFiles.has(item.path)) {
         file.classList.add('selected');
@@ -134,6 +172,109 @@ function updateKBSelectedCount() {
 // Toggle KB panel
 function toggleKBPanel() {
   kbPanel.classList.toggle('hidden');
+}
+
+// Show context menu
+function showContextMenu(e, item) {
+  e.preventDefault();
+  e.stopPropagation();
+  
+  contextTarget = item;
+  kbContextMenu.style.left = `${e.clientX}px`;
+  kbContextMenu.style.top = `${e.clientY}px`;
+  kbContextMenu.classList.remove('hidden');
+}
+
+// Hide context menu
+function hideContextMenu() {
+  kbContextMenu.classList.add('hidden');
+  contextTarget = null;
+}
+
+// Handle context menu action
+async function handleContextAction(action) {
+  if (!contextTarget) return;
+  
+  hideContextMenu();
+  
+  if (action === 'rename') {
+    showModal('rename', contextTarget.name);
+  } else if (action === 'delete') {
+    if (confirm(`Delete "${contextTarget.name}"? This cannot be undone.`)) {
+      const result = await window.sparkAPI.kbDelete(contextTarget.path);
+      if (result.success) {
+        loadKnowledgeBase();
+      } else {
+        alert(`Error: ${result.error}`);
+      }
+    }
+  }
+}
+
+// Show modal
+function showModal(action, defaultValue = '') {
+  modalAction = action;
+  
+  switch (action) {
+    case 'newFolder':
+      modalHeader.textContent = 'New Folder';
+      modalInput.placeholder = 'Folder name';
+      modalConfirm.textContent = 'Create';
+      break;
+    case 'newFile':
+      modalHeader.textContent = 'New File';
+      modalInput.placeholder = 'filename.md';
+      modalConfirm.textContent = 'Create';
+      break;
+    case 'rename':
+      modalHeader.textContent = 'Rename';
+      modalInput.placeholder = 'New name';
+      modalConfirm.textContent = 'Rename';
+      break;
+  }
+  
+  modalInput.value = defaultValue;
+  kbModal.classList.remove('hidden');
+  modalInput.focus();
+  modalInput.select();
+}
+
+// Hide modal
+function hideModal() {
+  kbModal.classList.add('hidden');
+  modalInput.value = '';
+  modalAction = null;
+}
+
+// Handle modal confirm
+async function handleModalConfirm() {
+  const value = modalInput.value.trim();
+  if (!value) return;
+  
+  let result;
+  
+  switch (modalAction) {
+    case 'newFolder':
+      result = await window.sparkAPI.kbCreateFolder(value);
+      break;
+    case 'newFile':
+      const fileName = value.endsWith('.md') ? value : `${value}.md`;
+      result = await window.sparkAPI.kbCreateFile(fileName, `# ${value.replace('.md', '')}\n\n`);
+      break;
+    case 'rename':
+      if (contextTarget) {
+        result = await window.sparkAPI.kbRename(contextTarget.path, value);
+      }
+      break;
+  }
+  
+  hideModal();
+  
+  if (result?.success) {
+    loadKnowledgeBase();
+  } else if (result?.error) {
+    alert(`Error: ${result.error}`);
+  }
 }
 
 // Check connection to Spark
