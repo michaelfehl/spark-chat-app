@@ -154,58 +154,43 @@ ipcMain.handle('select-file', async () => {
   return null;
 });
 
-// Web search and page fetching
+// Web search using Brave Search API
 async function performWebSearch(query) {
   try {
-    // Check if query mentions specific news sites - fetch directly
-    const newsPatterns = [
-      { pattern: /cnn/i, url: 'https://lite.cnn.com/' },
-      { pattern: /bbc/i, url: 'https://www.bbc.com/news' },
-      { pattern: /reuters/i, url: 'https://www.reuters.com/' },
-      { pattern: /npr/i, url: 'https://text.npr.org/' },
-      { pattern: /ap news|associated press/i, url: 'https://apnews.com/' }
-    ];
+    // Use Brave Search API (working endpoint)
+    const braveUrl = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5`;
     
-    for (const site of newsPatterns) {
-      if (site.pattern.test(query)) {
-        return await fetchPageContent(site.url, query);
-      }
-    }
-    
-    // For general queries, use DuckDuckGo Instant Answers API
-    const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1`;
-    
-    const response = await fetch(ddgUrl, {
-      headers: { 'User-Agent': 'SparkChat/1.0' }
+    const response = await fetch(braveUrl, {
+      headers: {
+        'X-Subscription-Token': BRAVE_API_KEY,
+        'Accept': 'application/json'
+      },
+      signal: AbortSignal.timeout(10000)
     });
     
-    if (response.ok) {
-      const data = await response.json();
-      
-      let results = '';
-      
-      if (data.AbstractText) {
-        results += `Summary: ${data.AbstractText}\nSource: ${data.AbstractURL}\n\n`;
-      }
-      
-      if (data.RelatedTopics && data.RelatedTopics.length > 0) {
-        const topics = data.RelatedTopics
-          .filter(t => t.Text)
-          .slice(0, 5)
-          .map((t, i) => `[${i + 1}] ${t.Text}`)
-          .join('\n');
-        if (topics) results += `Related:\n${topics}`;
-      }
-      
-      if (results) {
-        return { success: true, results, count: 1 };
-      }
+    if (!response.ok) {
+      console.error('Brave Search error:', response.status, await response.text());
+      throw new Error(`Brave Search failed: ${response.status}`);
     }
     
-    // Fallback: return helpful message
+    const data = await response.json();
+    
+    if (data.web && data.web.results && data.web.results.length > 0) {
+      const results = data.web.results
+        .slice(0, 5)
+        .map((r, i) => `[${i + 1}] ${r.title}\n${r.url}\n${r.description || ''}`)
+        .join('\n\n');
+      
+      return {
+        success: true,
+        results: results,
+        count: data.web.results.length
+      };
+    }
+    
     return {
       success: true,
-      results: `Web search attempted for: "${query}". For best results with news sites, ask about specific outlets (CNN, BBC, Reuters, NPR, AP News) and I'll fetch their latest content directly.`,
+      results: `No results found for: "${query}"`,
       count: 0
     };
     
