@@ -2,6 +2,8 @@
 const folderTree = document.getElementById('folderTree');
 const fileGrid = document.getElementById('fileGrid');
 const kbPath = document.getElementById('kbPath');
+const kbMain = document.getElementById('kbMain');
+const uploadToast = document.getElementById('uploadToast');
 const selectionCount = document.getElementById('selectionCount');
 const selectedTags = document.getElementById('selectedTags');
 const newFolderBtn = document.getElementById('newFolderBtn');
@@ -61,7 +63,91 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     updateSelectionUI();
   });
+  
+  // Drag and drop handlers
+  kbMain.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    kbMain.classList.add('drag-over');
+  });
+  
+  kbMain.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only remove if leaving the main area
+    if (!kbMain.contains(e.relatedTarget)) {
+      kbMain.classList.remove('drag-over');
+    }
+  });
+  
+  kbMain.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    kbMain.classList.remove('drag-over');
+    
+    const files = e.dataTransfer.files;
+    if (files.length === 0) return;
+    
+    // Get file paths
+    const paths = [];
+    for (const file of files) {
+      if (file.path) {
+        paths.push(file.path);
+      }
+    }
+    
+    if (paths.length === 0) {
+      showToast('Could not read file paths', 'error');
+      return;
+    }
+    
+    // Upload files to current folder
+    showToast(`Uploading ${paths.length} item${paths.length > 1 ? 's' : ''}...`, 'info');
+    
+    const results = await window.sparkAPI.kbHandleDrop(paths, currentFolder);
+    
+    const successCount = results.filter(r => r.success).length;
+    const failCount = results.filter(r => !r.success).length;
+    
+    if (failCount === 0) {
+      showToast(`✓ Uploaded ${successCount} item${successCount > 1 ? 's' : ''}`, 'success');
+    } else if (successCount === 0) {
+      showToast(`✗ Failed to upload files`, 'error');
+    } else {
+      showToast(`Uploaded ${successCount}, failed ${failCount}`, 'warning');
+    }
+    
+    // Refresh KB
+    loadKnowledgeBase();
+  });
 });
+
+// Show toast notification
+function showToast(message, type = 'info') {
+  const toastIcon = uploadToast.querySelector('.toast-icon');
+  const toastText = uploadToast.querySelector('.toast-text');
+  
+  toastText.textContent = message;
+  
+  switch (type) {
+    case 'success':
+      toastIcon.textContent = '✓';
+      uploadToast.className = 'upload-toast visible success';
+      break;
+    case 'error':
+      toastIcon.textContent = '✗';
+      uploadToast.className = 'upload-toast visible error';
+      break;
+    default:
+      toastIcon.textContent = '⏳';
+      uploadToast.className = 'upload-toast visible';
+  }
+  
+  // Hide after 3 seconds
+  setTimeout(() => {
+    uploadToast.classList.remove('visible');
+  }, 3000);
+}
 
 // Load KB structure
 async function loadKnowledgeBase() {

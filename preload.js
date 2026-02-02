@@ -36,6 +36,8 @@ contextBridge.exposeInMainWorld('sparkAPI', {
   // KB Browser Window
   kbOpenWindow: (selectedFiles) =>
     ipcRenderer.invoke('kb-open-window', selectedFiles),
+  kbHandleDrop: (paths, targetFolder) =>
+    ipcRenderer.invoke('kb-handle-drop', paths, targetFolder),
   kbCloseWindow: () =>
     ipcRenderer.invoke('kb-close-window'),
   kbSendSelection: (selectedFiles) =>

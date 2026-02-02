@@ -27,10 +27,21 @@
         <div class="folder-tree" id="folderTree"></div>
       </div>
       
-      <div class="kb-main">
+      <div class="kb-main" id="kbMain">
+        <div class="drop-overlay">
+          <div class="drop-icon">📥</div>
+          <div class="drop-text">Drop files or folders here</div>
+          <div class="drop-hint">They will be added to the current folder</div>
+        </div>
         <div class="file-grid" id="fileGrid">
           <div class="loading">Loading knowledge base...</div>
         </div>
+      </div>
+      
+      <!-- Upload toast -->
+      <div class="upload-toast" id="uploadToast">
+        <span class="toast-icon">✓</span>
+        <span class="toast-text">Files uploaded</span>
       </div>
     </div>
     

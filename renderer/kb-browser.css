@@ -401,3 +401,79 @@ body {
   font-size: 48px;
   margin-bottom: 16px;
 }
+
+/* Drag and drop */
+.kb-main.drag-over {
+  background: rgba(233, 69, 96, 0.1);
+  border: 2px dashed var(--accent);
+  border-radius: 8px;
+}
+
+.drop-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(26, 26, 46, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.kb-main.drag-over .drop-overlay {
+  opacity: 1;
+}
+
+.drop-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.drop-text {
+  font-size: 18px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.drop-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+/* Upload progress toast */
+.upload-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 200;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.upload-toast.visible {
+  opacity: 1;
+}
+
+.upload-toast.success {
+  border-color: var(--success);
+}
+
+.upload-toast.error {
+  border-color: var(--error);
+}

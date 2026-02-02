@@ -446,6 +446,57 @@ ipcMain.handle('kb-open-finder', async () => {
   return { success: true };
 });
 
+// Handle dropped files/folders
+ipcMain.handle('kb-handle-drop', async (event, droppedPaths, targetFolder) => {
+  const results = [];
+  
+  for (const sourcePath of droppedPaths) {
+    try {
+      const fileName = path.basename(sourcePath);
+      const destPath = path.join(KB_PATH, targetFolder || '', fileName);
+      
+      // Check if source exists
+      if (!fs.existsSync(sourcePath)) {
+        results.push({ path: sourcePath, success: false, error: 'Source not found' });
+        continue;
+      }
+      
+      const stats = fs.statSync(sourcePath);
+      
+      if (stats.isDirectory()) {
+        // Copy directory recursively
+        copyDirSync(sourcePath, destPath);
+        results.push({ path: sourcePath, success: true, type: 'folder', name: fileName });
+      } else {
+        // Copy file
+        fs.copyFileSync(sourcePath, destPath);
+        results.push({ path: sourcePath, success: true, type: 'file', name: fileName });
+      }
+    } catch (error) {
+      results.push({ path: sourcePath, success: false, error: error.message });
+    }
+  }
+  
+  return results;
+});
+
+// Helper: Copy directory recursively
+function copyDirSync(src, dest) {
+  fs.mkdirSync(dest, { recursive: true });
+  const entries = fs.readdirSync(src, { withFileTypes: true });
+  
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+    
+    if (entry.isDirectory()) {
+      copyDirSync(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
+}
+
 // Open KB browser window
 ipcMain.handle('kb-open-window', async (event, selectionData) => {
   if (kbWindow && !kbWindow.isDestroyed()) {
