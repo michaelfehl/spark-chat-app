@@ -12,6 +12,9 @@ const BRAVE_API_KEY = process.env.BRAVE_API_KEY || 'BSAcz5U2xM27VNzkhVmvBlDiSiA1
 // Knowledge Base path - SparkRAG folder
 const KB_PATH = process.env.SPARKRAG_PATH || path.join(os.homedir(), 'Documents', 'Brain Vault', 'SecondBrain', 'SparkRAG');
 
+// Assistants data path
+const ASSISTANTS_PATH = path.join(__dirname, 'data', 'assistants.json');
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -289,6 +292,76 @@ ipcMain.handle('check-connection', async () => {
     return response.ok;
   } catch {
     return false;
+  }
+});
+
+// === ASSISTANTS MANAGEMENT ===
+
+// Get all assistants
+ipcMain.handle('get-assistants', async () => {
+  try {
+    if (!fs.existsSync(ASSISTANTS_PATH)) {
+      return [];
+    }
+    const data = fs.readFileSync(ASSISTANTS_PATH, 'utf-8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error reading assistants:', error);
+    return [];
+  }
+});
+
+// Save assistant (create or update)
+ipcMain.handle('save-assistant', async (event, assistant) => {
+  try {
+    let assistants = [];
+    if (fs.existsSync(ASSISTANTS_PATH)) {
+      assistants = JSON.parse(fs.readFileSync(ASSISTANTS_PATH, 'utf-8'));
+    }
+    
+    const existingIndex = assistants.findIndex(a => a.id === assistant.id);
+    
+    if (existingIndex >= 0) {
+      // Update existing
+      assistants[existingIndex] = {
+        ...assistants[existingIndex],
+        ...assistant,
+        updatedAt: new Date().toISOString()
+      };
+    } else {
+      // Create new
+      assistant.id = `asst_${Date.now()}`;
+      assistant.createdAt = new Date().toISOString();
+      assistants.push(assistant);
+    }
+    
+    // Ensure data directory exists
+    const dataDir = path.dirname(ASSISTANTS_PATH);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    
+    fs.writeFileSync(ASSISTANTS_PATH, JSON.stringify(assistants, null, 2));
+    return { success: true, assistant };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Delete assistant
+ipcMain.handle('delete-assistant', async (event, assistantId) => {
+  try {
+    if (!fs.existsSync(ASSISTANTS_PATH)) {
+      return { success: false, error: 'No assistants file' };
+    }
+    
+    let assistants = JSON.parse(fs.readFileSync(ASSISTANTS_PATH, 'utf-8'));
+    assistants = assistants.filter(a => a.id !== assistantId);
+    
+    fs.writeFileSync(ASSISTANTS_PATH, JSON.stringify(assistants, null, 2));
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
   }
 });
 

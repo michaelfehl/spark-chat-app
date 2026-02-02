@@ -72,6 +72,12 @@
       <!-- Input area -->
       <div class="input-area">
         <div class="input-options">
+          <div class="agent-selector">
+            <select id="agentSelect" title="Select Agent">
+              <option value="">Loading agents...</option>
+            </select>
+            <button class="agent-manage-btn" id="agentManageBtn" title="Manage Agents">⚙️</button>
+          </div>
           <button class="kb-toggle-btn" id="kbToggleBtn" title="Knowledge Base">
             📚 KB
           </button>
@@ -111,6 +117,39 @@
           <div class="selection-tags" id="selectionTags"></div>
           <button class="clear-selection" id="clearKBSelection" title="Clear all">Clear</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Agent Management Modal -->
+  <div class="agent-modal hidden" id="agentModal">
+    <div class="agent-modal-content">
+      <div class="agent-modal-header">
+        <span>🤖 Manage Agents</span>
+        <button class="modal-close" id="agentModalClose">✕</button>
+      </div>
+      <div class="agent-list" id="agentList"></div>
+      <div class="agent-form hidden" id="agentForm">
+        <input type="hidden" id="agentId">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" id="agentName" placeholder="Agent name">
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" id="agentDesc" placeholder="Brief description">
+        </div>
+        <div class="form-group">
+          <label>System Prompt</label>
+          <textarea id="agentPrompt" rows="8" placeholder="Enter the system prompt..."></textarea>
+        </div>
+        <div class="form-actions">
+          <button class="btn-cancel" id="agentFormCancel">Cancel</button>
+          <button class="btn-save" id="agentFormSave">Save</button>
+        </div>
+      </div>
+      <div class="agent-modal-footer" id="agentModalFooter">
+        <button class="btn-add" id="addAgentBtn">+ Add New Agent</button>
       </div>
     </div>
   </div>

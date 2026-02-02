@@ -47,5 +47,13 @@ contextBridge.exposeInMainWorld('sparkAPI', {
   onKBSelectionUpdate: (callback) =>
     ipcRenderer.on('kb-selection-update', (event, files) => callback(files)),
   onInitSelection: (callback) =>
-    ipcRenderer.on('init-selection', (event, files) => callback(files))
+    ipcRenderer.on('init-selection', (event, files) => callback(files)),
+  
+  // Assistants
+  getAssistants: () =>
+    ipcRenderer.invoke('get-assistants'),
+  saveAssistant: (assistant) =>
+    ipcRenderer.invoke('save-assistant', assistant),
+  deleteAssistant: (id) =>
+    ipcRenderer.invoke('delete-assistant', id)
 });

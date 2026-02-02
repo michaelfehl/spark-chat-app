@@ -38,7 +38,8 @@
       "main.js",
       "preload.js",
       "renderer/**/*",
-      "assets/**/*"
+      "assets/**/*",
+      "data/**/*"
     ],
     "extraResources": []
   }

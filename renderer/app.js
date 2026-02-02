@@ -34,6 +34,20 @@ let selectedKBFolders = new Set();
 let kbStructure = null;
 let contextTarget = null; // Current item for context menu
 let modalAction = null; // Current modal action
+let assistants = [];
+let currentAssistant = null;
+
+// Agent elements
+const agentSelect = document.getElementById('agentSelect');
+const agentManageBtn = document.getElementById('agentManageBtn');
+const agentModal = document.getElementById('agentModal');
+const agentModalClose = document.getElementById('agentModalClose');
+const agentList = document.getElementById('agentList');
+const agentForm = document.getElementById('agentForm');
+const agentModalFooter = document.getElementById('agentModalFooter');
+const addAgentBtn = document.getElementById('addAgentBtn');
+const agentFormCancel = document.getElementById('agentFormCancel');
+const agentFormSave = document.getElementById('agentFormSave');
 
 // Selection bar elements
 const kbSelectionBar = document.getElementById('kbSelectionBar');
@@ -86,8 +100,17 @@ document.addEventListener('DOMContentLoaded', () => {
     updateKBSelectedCount();
   });
   
-  // Load KB structure
+  // Agent handlers
+  agentSelect.addEventListener('change', handleAgentChange);
+  agentManageBtn.addEventListener('click', openAgentModal);
+  agentModalClose.addEventListener('click', closeAgentModal);
+  addAgentBtn.addEventListener('click', showAgentForm);
+  agentFormCancel.addEventListener('click', hideAgentForm);
+  agentFormSave.addEventListener('click', saveAgent);
+  
+  // Load KB structure and agents
   loadKnowledgeBase();
+  loadAssistants();
 });
 
 // Load Knowledge Base structure
@@ -480,11 +503,11 @@ async function sendMessage() {
   
   // Show typing indicator
   const hasSearch = webSearchToggle.checked;
-  const hasKB = selectedKBFiles.size > 0;
+  const hasKB = selectedKBFiles.size > 0 || selectedKBFolders.size > 0;
   const typingIndicator = addTypingIndicator(hasSearch, hasKB);
   
-  // Build system prompt
-  let systemPrompt = 'You are Spark, a helpful AI assistant running on a local NVIDIA Jetson system. Be concise but thorough.';
+  // Build system prompt from current agent
+  let systemPrompt = currentAssistant?.prompt || 'You are Spark, a helpful AI assistant. Be concise but thorough.';
   
   if (kbContext) {
     systemPrompt += `\n\nKnowledge Base Context:\n${kbContext}`;
@@ -598,4 +621,143 @@ function removeFile() {
   uploadedFile = null;
   uploadedFileEl.classList.add('hidden');
   uploadedFileEl.querySelector('.file-name').textContent = '';
+}
+
+// === AGENT MANAGEMENT ===
+
+// Load assistants
+async function loadAssistants() {
+  assistants = await window.sparkAPI.getAssistants();
+  populateAgentSelect();
+}
+
+// Populate agent dropdown
+function populateAgentSelect() {
+  agentSelect.innerHTML = '';
+  
+  for (const agent of assistants) {
+    const option = document.createElement('option');
+    option.value = agent.id;
+    option.textContent = agent.name;
+    if (agent.description) {
+      option.title = agent.description;
+    }
+    agentSelect.appendChild(option);
+  }
+  
+  // Select first agent by default
+  if (assistants.length > 0) {
+    currentAssistant = assistants[0];
+    agentSelect.value = currentAssistant.id;
+  }
+}
+
+// Handle agent selection change
+function handleAgentChange() {
+  const selectedId = agentSelect.value;
+  currentAssistant = assistants.find(a => a.id === selectedId) || null;
+}
+
+// Open agent management modal
+function openAgentModal() {
+  agentModal.classList.remove('hidden');
+  renderAgentList();
+  hideAgentForm();
+}
+
+// Close agent modal
+function closeAgentModal() {
+  agentModal.classList.add('hidden');
+}
+
+// Render agent list in modal
+function renderAgentList() {
+  agentList.innerHTML = '';
+  
+  for (const agent of assistants) {
+    const item = document.createElement('div');
+    item.className = 'agent-item';
+    item.innerHTML = `
+      <div class="agent-item-info">
+        <div class="agent-item-name">${agent.name}</div>
+        <div class="agent-item-desc">${agent.description || ''}</div>
+      </div>
+      <div class="agent-item-actions">
+        <button class="edit" data-id="${agent.id}">✏️ Edit</button>
+        ${agent.id !== 'asst_default' ? `<button class="delete" data-id="${agent.id}">🗑️</button>` : ''}
+      </div>
+    `;
+    
+    item.querySelector('.edit').addEventListener('click', (e) => {
+      e.stopPropagation();
+      editAgent(agent.id);
+    });
+    
+    const deleteBtn = item.querySelector('.delete');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (confirm(`Delete "${agent.name}"?`)) {
+          await window.sparkAPI.deleteAssistant(agent.id);
+          await loadAssistants();
+          renderAgentList();
+        }
+      });
+    }
+    
+    agentList.appendChild(item);
+  }
+}
+
+// Show agent form (new)
+function showAgentForm(agent = null) {
+  agentForm.classList.remove('hidden');
+  agentModalFooter.classList.add('hidden');
+  agentList.style.display = 'none';
+  
+  document.getElementById('agentId').value = agent?.id || '';
+  document.getElementById('agentName').value = agent?.name || '';
+  document.getElementById('agentDesc').value = agent?.description || '';
+  document.getElementById('agentPrompt').value = agent?.prompt || '';
+}
+
+// Hide agent form
+function hideAgentForm() {
+  agentForm.classList.add('hidden');
+  agentModalFooter.classList.remove('hidden');
+  agentList.style.display = 'block';
+}
+
+// Edit existing agent
+function editAgent(agentId) {
+  const agent = assistants.find(a => a.id === agentId);
+  if (agent) {
+    showAgentForm(agent);
+  }
+}
+
+// Save agent
+async function saveAgent() {
+  const id = document.getElementById('agentId').value;
+  const name = document.getElementById('agentName').value.trim();
+  const description = document.getElementById('agentDesc').value.trim();
+  const prompt = document.getElementById('agentPrompt').value.trim();
+  
+  if (!name || !prompt) {
+    alert('Name and prompt are required');
+    return;
+  }
+  
+  const agent = { name, description, prompt };
+  if (id) agent.id = id;
+  
+  const result = await window.sparkAPI.saveAssistant(agent);
+  
+  if (result.success) {
+    await loadAssistants();
+    hideAgentForm();
+    renderAgentList();
+  } else {
+    alert(`Error: ${result.error}`);
+  }
 }

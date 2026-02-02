@@ -639,6 +639,43 @@ body {
   color: var(--text-secondary);
 }
 
+/* Agent Selector */
+.agent-selector {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#agentSelect {
+  padding: 6px 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  min-width: 150px;
+}
+
+#agentSelect:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.agent-manage-btn {
+  padding: 6px 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.agent-manage-btn:hover {
+  background: var(--border);
+}
+
 .kb-toggle-btn {
   padding: 6px 12px;
   background: var(--bg-tertiary);
@@ -659,6 +696,200 @@ body {
   background: rgba(233, 69, 96, 0.2);
   border-color: var(--accent);
   color: var(--accent);
+}
+
+/* Agent Modal */
+.agent-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 400;
+}
+
+.agent-modal.hidden {
+  display: none;
+}
+
+.agent-modal-content {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.agent-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.modal-close:hover {
+  color: var(--text-primary);
+}
+
+.agent-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.agent-item {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.agent-item:hover {
+  background: var(--border);
+}
+
+.agent-item-info {
+  flex: 1;
+}
+
+.agent-item-name {
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.agent-item-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.agent-item-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.agent-item-actions button {
+  padding: 4px 8px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.agent-item-actions button:hover {
+  background: var(--border);
+}
+
+.agent-item-actions button.delete:hover {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.agent-form {
+  padding: 16px 20px;
+}
+
+.agent-form.hidden {
+  display: none;
+}
+
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.btn-cancel,
+.btn-save,
+.btn-add {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-cancel {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.btn-save,
+.btn-add {
+  background: var(--accent);
+  color: white;
+}
+
+.btn-save:hover,
+.btn-add:hover {
+  background: var(--accent-hover);
+}
+
+.agent-modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.agent-modal-footer.hidden {
+  display: none;
 }
 
 /* Context Menu */
