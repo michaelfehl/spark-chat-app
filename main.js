@@ -9,13 +9,49 @@ let kbWindow = null;
 // Brave Search API key (get free key at https://brave.com/search/api/)
 const BRAVE_API_KEY = process.env.BRAVE_API_KEY || 'BSAcz5U2xM27VNzkhVmvBlDiSiA1F8a';
 
-// Knowledge Base path - SparkRAG folder
+// Spark API URL for agents and KB
+const SPARK_API_URL = 'http://100.86.36.112:30001';
+
+// Knowledge Base path - SparkRAG folder (local fallback)
 const KB_PATH = process.env.SPARKRAG_PATH || path.join(os.homedir(), 'Documents', 'Brain Vault', 'SecondBrain', 'SparkRAG');
 
-// Assistants data path - use app.getPath for writable location
+// Assistants data path - use app.getPath for writable location (local fallback)
 const ASSISTANTS_PATH = app.isPackaged 
   ? path.join(app.getPath('userData'), 'assistants.json')
   : path.join(__dirname, 'data', 'assistants.json');
+
+// HTTP helper for Spark API
+const http = require('http');
+function sparkApiRequest(method, path, data = null) {
+  return new Promise((resolve, reject) => {
+    const postData = data ? JSON.stringify(data) : null;
+    const options = {
+      hostname: '100.86.36.112',
+      port: 30001,
+      path: path,
+      method: method,
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 10000
+    };
+    if (postData) options.headers['Content-Length'] = Buffer.byteLength(postData);
+    
+    const req = http.request(options, (res) => {
+      let body = '';
+      res.on('data', chunk => body += chunk);
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(body));
+        } catch (e) {
+          resolve(null);
+        }
+      });
+    });
+    req.on('error', () => resolve(null));
+    req.on('timeout', () => { req.destroy(); resolve(null); });
+    if (postData) req.write(postData);
+    req.end();
+  });
+}
 
 // Copy default assistants on first run
 function initAssistants() {
@@ -313,61 +349,83 @@ ipcMain.handle('check-connection', async () => {
 
 // === ASSISTANTS MANAGEMENT ===
 
-// Get all assistants
+// Get all assistants from Spark API
 ipcMain.handle('get-assistants', async () => {
   try {
-    initAssistants(); // Ensure file exists
-    if (!fs.existsSync(ASSISTANTS_PATH)) {
-      // Return default if no file
-      return [
-        {
-          id: "asst_default",
-          name: "Spark (Default)",
-          description: "General-purpose AI assistant",
-          prompt: "You are Spark, a helpful AI assistant running on a local NVIDIA Jetson system. Be concise but thorough.",
-          createdBy: "system",
-          createdAt: new Date().toISOString()
-        }
-      ];
+    // Try Spark API first
+    const agents = await sparkApiRequest('GET', '/api/agents');
+    if (agents && Array.isArray(agents)) {
+      // Map to expected format
+      return agents.map(a => ({
+        id: a.id,
+        name: a.name,
+        description: a.systemPrompt ? a.systemPrompt.substring(0, 100) + '...' : '',
+        prompt: a.systemPrompt || '',
+        defaultKB: a.defaultKB || [],
+        isDefault: a.isDefault || false
+      }));
     }
-    const data = fs.readFileSync(ASSISTANTS_PATH, 'utf-8');
-    return JSON.parse(data);
+    
+    // Fallback to local file
+    initAssistants();
+    if (fs.existsSync(ASSISTANTS_PATH)) {
+      const data = fs.readFileSync(ASSISTANTS_PATH, 'utf-8');
+      return JSON.parse(data);
+    }
+    
+    // Default fallback
+    return [{
+      id: "asst_default",
+      name: "Spark (Default)",
+      description: "General-purpose AI assistant",
+      prompt: "You are Spark, a helpful AI assistant running on a local NVIDIA Jetson system. Be concise but thorough.",
+      defaultKB: []
+    }];
   } catch (error) {
     console.error('Error reading assistants:', error);
     return [];
   }
 });
 
-// Save assistant (create or update)
+// Save assistant to Spark API (create or update)
 ipcMain.handle('save-assistant', async (event, assistant) => {
   try {
+    const data = {
+      name: assistant.name,
+      systemPrompt: assistant.prompt || assistant.systemPrompt || '',
+      defaultKB: assistant.defaultKB || []
+    };
+    
+    let result;
+    if (assistant.id && !assistant.id.startsWith('asst_')) {
+      // Update existing in Spark API
+      result = await sparkApiRequest('PUT', `/api/agents/${assistant.id}`, data);
+    } else {
+      // Create new in Spark API
+      result = await sparkApiRequest('POST', '/api/agents', data);
+    }
+    
+    if (result && result.id) {
+      return { success: true, assistant: result };
+    }
+    
+    // Fallback to local storage
     let assistants = [];
     if (fs.existsSync(ASSISTANTS_PATH)) {
       assistants = JSON.parse(fs.readFileSync(ASSISTANTS_PATH, 'utf-8'));
     }
     
     const existingIndex = assistants.findIndex(a => a.id === assistant.id);
-    
     if (existingIndex >= 0) {
-      // Update existing
-      assistants[existingIndex] = {
-        ...assistants[existingIndex],
-        ...assistant,
-        updatedAt: new Date().toISOString()
-      };
+      assistants[existingIndex] = { ...assistants[existingIndex], ...assistant, updatedAt: new Date().toISOString() };
     } else {
-      // Create new
       assistant.id = `asst_${Date.now()}`;
       assistant.createdAt = new Date().toISOString();
       assistants.push(assistant);
     }
     
-    // Ensure data directory exists
     const dataDir = path.dirname(ASSISTANTS_PATH);
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-    
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
     fs.writeFileSync(ASSISTANTS_PATH, JSON.stringify(assistants, null, 2));
     return { success: true, assistant };
   } catch (error) {
@@ -375,17 +433,23 @@ ipcMain.handle('save-assistant', async (event, assistant) => {
   }
 });
 
-// Delete assistant
+// Delete assistant from Spark API
 ipcMain.handle('delete-assistant', async (event, assistantId) => {
   try {
-    if (!fs.existsSync(ASSISTANTS_PATH)) {
-      return { success: false, error: 'No assistants file' };
+    // Try Spark API first
+    if (assistantId && !assistantId.startsWith('asst_')) {
+      const result = await sparkApiRequest('DELETE', `/api/agents/${assistantId}`);
+      if (result && result.success) {
+        return { success: true };
+      }
     }
     
-    let assistants = JSON.parse(fs.readFileSync(ASSISTANTS_PATH, 'utf-8'));
-    assistants = assistants.filter(a => a.id !== assistantId);
-    
-    fs.writeFileSync(ASSISTANTS_PATH, JSON.stringify(assistants, null, 2));
+    // Fallback to local
+    if (fs.existsSync(ASSISTANTS_PATH)) {
+      let assistants = JSON.parse(fs.readFileSync(ASSISTANTS_PATH, 'utf-8'));
+      assistants = assistants.filter(a => a.id !== assistantId);
+      fs.writeFileSync(ASSISTANTS_PATH, JSON.stringify(assistants, null, 2));
+    }
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
@@ -442,10 +506,24 @@ ipcMain.handle('get-knowledge-base', async () => {
   }
 });
 
-// Read knowledge base file(s)
+// Read knowledge base file(s) - try Spark API first, fallback to local
 ipcMain.handle('read-kb-files', async (event, filePaths) => {
-  const contents = [];
+  // Try Spark API bulk fetch first
+  try {
+    const result = await sparkApiRequest('POST', '/api/kb/contents', { paths: filePaths });
+    if (result && result.files && result.files.length > 0) {
+      return result.files.map(f => ({
+        path: f.path,
+        name: path.basename(f.path),
+        content: f.content
+      }));
+    }
+  } catch (e) {
+    // Fall through to local
+  }
   
+  // Fallback to local files
+  const contents = [];
   for (const relativePath of filePaths) {
     try {
       const fullPath = path.join(KB_PATH, relativePath);
@@ -462,7 +540,6 @@ ipcMain.handle('read-kb-files', async (event, filePaths) => {
       });
     }
   }
-  
   return contents;
 });
 
