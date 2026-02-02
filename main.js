@@ -1,11 +1,15 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
 let mainWindow;
 
 // Brave Search API key (get free key at https://brave.com/search/api/)
 const BRAVE_API_KEY = process.env.BRAVE_API_KEY || 'BSAcz5U2xM27VNzkhVmvBlDiSiA1F8a';
+
+// Knowledge Base path - SparkRAG folder
+const KB_PATH = process.env.SPARKRAG_PATH || path.join(os.homedir(), 'Documents', 'Brain Vault', 'SecondBrain', 'SparkRAG');
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -211,4 +215,78 @@ ipcMain.handle('check-connection', async () => {
   } catch {
     return false;
   }
+});
+
+// Scan knowledge base directory
+function scanDirectory(dirPath, basePath = '') {
+  const items = [];
+  
+  try {
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      if (entry.name.startsWith('.') || entry.name.startsWith('_')) continue;
+      
+      const relativePath = basePath ? `${basePath}/${entry.name}` : entry.name;
+      
+      if (entry.isDirectory()) {
+        items.push({
+          name: entry.name,
+          path: relativePath,
+          type: 'folder',
+          children: scanDirectory(path.join(dirPath, entry.name), relativePath)
+        });
+      } else if (entry.name.endsWith('.md') || entry.name.endsWith('.txt')) {
+        const stats = fs.statSync(path.join(dirPath, entry.name));
+        items.push({
+          name: entry.name,
+          path: relativePath,
+          type: 'file',
+          size: stats.size
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error scanning directory:', error);
+  }
+  
+  return items;
+}
+
+// Get knowledge base structure
+ipcMain.handle('get-knowledge-base', async () => {
+  try {
+    if (!fs.existsSync(KB_PATH)) {
+      return { success: false, error: 'Knowledge base path not found', path: KB_PATH };
+    }
+    
+    const structure = scanDirectory(KB_PATH);
+    return { success: true, structure, path: KB_PATH };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Read knowledge base file(s)
+ipcMain.handle('read-kb-files', async (event, filePaths) => {
+  const contents = [];
+  
+  for (const relativePath of filePaths) {
+    try {
+      const fullPath = path.join(KB_PATH, relativePath);
+      const content = fs.readFileSync(fullPath, 'utf-8');
+      contents.push({
+        path: relativePath,
+        name: path.basename(relativePath),
+        content: content
+      });
+    } catch (error) {
+      contents.push({
+        path: relativePath,
+        error: error.message
+      });
+    }
+  }
+  
+  return contents;
 });

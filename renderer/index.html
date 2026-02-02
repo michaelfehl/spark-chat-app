@@ -33,14 +33,25 @@
         </div>
       </div>
 
+      <!-- Knowledge Base Panel -->
+      <div class="kb-panel hidden" id="kbPanel">
+        <div class="kb-header">
+          <span>📚 Knowledge Base Files</span>
+          <button class="kb-close" id="kbClose">✕</button>
+        </div>
+        <div class="kb-path" id="kbPath"></div>
+        <div class="kb-tree" id="kbTree"></div>
+        <div class="kb-selected" id="kbSelected">
+          <span class="kb-selected-count">0 files selected</span>
+        </div>
+      </div>
+
       <!-- Input area -->
       <div class="input-area">
         <div class="input-options">
-          <label class="toggle-option">
-            <input type="checkbox" id="knowledgeBase">
-            <span class="toggle-slider"></span>
-            <span class="toggle-label">📚 Knowledge Base</span>
-          </label>
+          <button class="kb-toggle-btn" id="kbToggleBtn" title="Knowledge Base">
+            📚 KB
+          </button>
           <label class="toggle-option">
             <input type="checkbox" id="webSearch" checked>
             <span class="toggle-slider"></span>

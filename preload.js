@@ -8,5 +8,9 @@ contextBridge.exposeInMainWorld('sparkAPI', {
   checkConnection: () => 
     ipcRenderer.invoke('check-connection'),
   webSearch: (query) =>
-    ipcRenderer.invoke('web-search', query)
+    ipcRenderer.invoke('web-search', query),
+  getKnowledgeBase: () =>
+    ipcRenderer.invoke('get-knowledge-base'),
+  readKBFiles: (filePaths) =>
+    ipcRenderer.invoke('read-kb-files', filePaths)
 });

@@ -5,35 +5,136 @@ const sendBtn = document.getElementById('sendBtn');
 const clearBtn = document.getElementById('clearBtn');
 const uploadBtn = document.getElementById('uploadBtn');
 const uploadedFileEl = document.getElementById('uploadedFile');
-const knowledgeBaseToggle = document.getElementById('knowledgeBase');
 const webSearchToggle = document.getElementById('webSearch');
 const connectionStatus = document.getElementById('connectionStatus');
+
+// Knowledge Base Elements
+const kbPanel = document.getElementById('kbPanel');
+const kbToggleBtn = document.getElementById('kbToggleBtn');
+const kbClose = document.getElementById('kbClose');
+const kbTree = document.getElementById('kbTree');
+const kbPath = document.getElementById('kbPath');
+const kbSelected = document.getElementById('kbSelected');
 
 // State
 let conversationHistory = [];
 let uploadedFile = null;
 let isConnected = false;
+let selectedKBFiles = new Set();
+let kbStructure = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   checkConnection();
-  setInterval(checkConnection, 30000); // Check every 30s
+  setInterval(checkConnection, 30000);
   
-  // Auto-resize textarea
   messageInput.addEventListener('input', autoResize);
   messageInput.addEventListener('keydown', handleKeydown);
-  
-  // Enable/disable send button
   messageInput.addEventListener('input', updateSendButton);
   
-  // Button handlers
   sendBtn.addEventListener('click', sendMessage);
   clearBtn.addEventListener('click', clearChat);
   uploadBtn.addEventListener('click', handleUpload);
-  
-  // Remove file handler
   uploadedFileEl.querySelector('.remove-file').addEventListener('click', removeFile);
+  
+  // Knowledge Base handlers
+  kbToggleBtn.addEventListener('click', toggleKBPanel);
+  kbClose.addEventListener('click', () => kbPanel.classList.add('hidden'));
+  
+  // Load KB structure
+  loadKnowledgeBase();
 });
+
+// Load Knowledge Base structure
+async function loadKnowledgeBase() {
+  const result = await window.sparkAPI.getKnowledgeBase();
+  
+  if (result.success) {
+    kbStructure = result.structure;
+    kbPath.textContent = result.path;
+    renderKBTree(result.structure, kbTree);
+  } else {
+    kbTree.innerHTML = `<div class="kb-error">⚠️ ${result.error}</div>`;
+    kbPath.textContent = result.path || 'Not configured';
+  }
+}
+
+// Render KB tree
+function renderKBTree(items, container) {
+  container.innerHTML = '';
+  
+  for (const item of items) {
+    if (item.type === 'folder') {
+      const folder = document.createElement('div');
+      folder.className = 'kb-folder';
+      folder.innerHTML = `
+        <div class="kb-folder-header">
+          <span class="kb-folder-icon">▶</span>
+          <span class="kb-folder-name">📁 ${item.name}</span>
+        </div>
+        <div class="kb-folder-children"></div>
+      `;
+      
+      folder.querySelector('.kb-folder-header').addEventListener('click', () => {
+        folder.classList.toggle('expanded');
+      });
+      
+      if (item.children && item.children.length > 0) {
+        renderKBTree(item.children, folder.querySelector('.kb-folder-children'));
+      }
+      
+      container.appendChild(folder);
+    } else {
+      const file = document.createElement('div');
+      file.className = 'kb-file';
+      file.dataset.path = item.path;
+      file.innerHTML = `
+        <span class="kb-file-check"></span>
+        <span class="kb-file-name">📄 ${item.name}</span>
+      `;
+      
+      file.addEventListener('click', () => toggleFileSelection(file, item.path));
+      
+      if (selectedKBFiles.has(item.path)) {
+        file.classList.add('selected');
+        file.querySelector('.kb-file-check').textContent = '✓';
+      }
+      
+      container.appendChild(file);
+    }
+  }
+}
+
+// Toggle file selection
+function toggleFileSelection(fileEl, path) {
+  if (selectedKBFiles.has(path)) {
+    selectedKBFiles.delete(path);
+    fileEl.classList.remove('selected');
+    fileEl.querySelector('.kb-file-check').textContent = '';
+  } else {
+    selectedKBFiles.add(path);
+    fileEl.classList.add('selected');
+    fileEl.querySelector('.kb-file-check').textContent = '✓';
+  }
+  
+  updateKBSelectedCount();
+}
+
+// Update selected count
+function updateKBSelectedCount() {
+  const count = selectedKBFiles.size;
+  kbSelected.querySelector('.kb-selected-count').textContent = 
+    `${count} file${count !== 1 ? 's' : ''} selected`;
+  
+  // Update button style
+  kbToggleBtn.classList.toggle('active', count > 0);
+  kbToggleBtn.textContent = count > 0 ? `📚 KB (${count})` : '📚 KB';
+}
+
+// Toggle KB panel
+function toggleKBPanel() {
+  kbPanel.classList.toggle('hidden');
+}
 
 // Check connection to Spark
 async function checkConnection() {
@@ -88,12 +189,10 @@ async function sendMessage() {
   const content = messageInput.value.trim();
   if (!content || !isConnected) return;
   
-  // Clear input
   messageInput.value = '';
   autoResize();
   updateSendButton();
   
-  // Remove welcome message
   const welcomeMsg = messagesContainer.querySelector('.welcome-message');
   if (welcomeMsg) welcomeMsg.remove();
   
@@ -104,27 +203,33 @@ async function sendMessage() {
     removeFile();
   }
   
-  // Add user message to UI
+  // Add KB context if files selected
+  let kbContext = '';
+  if (selectedKBFiles.size > 0) {
+    const kbFiles = await window.sparkAPI.readKBFiles([...selectedKBFiles]);
+    kbContext = kbFiles
+      .filter(f => !f.error)
+      .map(f => `--- ${f.name} ---\n${f.content}`)
+      .join('\n\n');
+  }
+  
   addMessage(content, 'user');
   
-  // Add to history
   conversationHistory.push({
     role: 'user',
     content: userMessage
   });
   
-  // Show typing indicator with search status
-  const typingIndicator = addTypingIndicator(webSearchToggle.checked);
+  // Show typing indicator
+  const hasSearch = webSearchToggle.checked;
+  const hasKB = selectedKBFiles.size > 0;
+  const typingIndicator = addTypingIndicator(hasSearch, hasKB);
   
-  // Build system prompt based on options
+  // Build system prompt
   let systemPrompt = 'You are Spark, a helpful AI assistant running on a local NVIDIA Jetson system. Be concise but thorough.';
   
-  if (knowledgeBaseToggle.checked) {
-    systemPrompt += ' Use your knowledge base to provide accurate information about CCSA policies and procedures when relevant.';
-  }
-  
-  if (webSearchToggle.checked) {
-    systemPrompt += ' You can reference current web information if needed to answer questions.';
+  if (kbContext) {
+    systemPrompt += `\n\nKnowledge Base Context:\n${kbContext}`;
   }
   
   const messages = [
@@ -134,7 +239,7 @@ async function sendMessage() {
   
   try {
     const response = await window.sparkAPI.sendMessage(messages, {
-      useKnowledgeBase: knowledgeBaseToggle.checked,
+      useKnowledgeBase: selectedKBFiles.size > 0,
       useWebSearch: webSearchToggle.checked
     });
     
@@ -162,7 +267,6 @@ function addMessage(content, type) {
   const messageEl = document.createElement('div');
   messageEl.className = `message ${type}`;
   
-  // Basic markdown-like formatting
   let formatted = content
     .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
@@ -170,7 +274,6 @@ function addMessage(content, type) {
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
     .replace(/\n/g, '<br>');
   
-  // Wrap in paragraphs (simplified)
   if (!formatted.includes('<pre>')) {
     formatted = formatted.split('<br><br>').map(p => `<p>${p}</p>`).join('');
   }
@@ -183,16 +286,20 @@ function addMessage(content, type) {
 }
 
 // Add typing indicator
-function addTypingIndicator(withSearch = false) {
+function addTypingIndicator(withSearch = false, withKB = false) {
   const indicator = document.createElement('div');
   indicator.className = 'message assistant typing-indicator';
   
-  if (withSearch) {
-    indicator.innerHTML = '<span class="search-label">🔍 Searching web...</span><span></span><span></span><span></span>';
-  } else {
-    indicator.innerHTML = '<span></span><span></span><span></span>';
+  let label = '';
+  if (withKB && withSearch) {
+    label = '<span class="search-label">📚🔍 Loading KB & searching...</span>';
+  } else if (withKB) {
+    label = '<span class="search-label">📚 Loading knowledge base...</span>';
+  } else if (withSearch) {
+    label = '<span class="search-label">🔍 Searching web...</span>';
   }
   
+  indicator.innerHTML = `${label}<span></span><span></span><span></span>`;
   messagesContainer.appendChild(indicator);
   scrollToBottom();
   return indicator;
