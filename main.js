@@ -447,7 +447,7 @@ ipcMain.handle('kb-open-finder', async () => {
 });
 
 // Open KB browser window
-ipcMain.handle('kb-open-window', async (event, selectedFiles) => {
+ipcMain.handle('kb-open-window', async (event, selectionData) => {
   if (kbWindow && !kbWindow.isDestroyed()) {
     kbWindow.focus();
     return { success: true };
@@ -470,9 +470,9 @@ ipcMain.handle('kb-open-window', async (event, selectedFiles) => {
   
   kbWindow.loadFile('renderer/kb-browser.html');
   
-  // Send initial selected files
+  // Send initial selected files/folders
   kbWindow.webContents.once('did-finish-load', () => {
-    kbWindow.webContents.send('init-selection', selectedFiles || []);
+    kbWindow.webContents.send('init-selection', selectionData || { files: [], folders: [] });
   });
   
   kbWindow.on('closed', () => {

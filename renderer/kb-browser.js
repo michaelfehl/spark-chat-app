@@ -18,6 +18,7 @@ const contextMenu = document.getElementById('contextMenu');
 // State
 let kbStructure = null;
 let selectedFiles = new Set();
+let selectedFolders = new Set();
 let currentFolder = '';
 let contextTarget = null;
 let modalAction = null;
@@ -50,8 +51,14 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   
   // Receive initial selection from main window
-  window.sparkAPI.onInitSelection((files) => {
-    selectedFiles = new Set(files);
+  window.sparkAPI.onInitSelection((data) => {
+    if (Array.isArray(data)) {
+      selectedFiles = new Set(data);
+      selectedFolders = new Set();
+    } else {
+      selectedFiles = new Set(data.files || []);
+      selectedFolders = new Set(data.folders || []);
+    }
     updateSelectionUI();
   });
 });
@@ -174,25 +181,36 @@ function createFileCard(item, fullPath, isFolder) {
   const card = document.createElement('div');
   card.className = 'file-card';
   
-  if (!isFolder && selectedFiles.has(fullPath)) {
+  if (isFolder && selectedFolders.has(fullPath)) {
+    card.classList.add('selected');
+  } else if (!isFolder && selectedFiles.has(fullPath)) {
     card.classList.add('selected');
   }
   
   const icon = isFolder ? '📁' : '📄';
   const size = item.size ? formatSize(item.size) : '';
+  const fileCount = isFolder && item.children ? countFilesInFolder(item.children) : null;
   
   card.innerHTML = `
     <div class="check-badge">✓</div>
     <div class="file-icon">${icon}</div>
     <div class="file-name">${item.name}</div>
     ${size ? `<div class="file-size">${size}</div>` : ''}
+    ${fileCount !== null ? `<div class="file-size">${fileCount} files</div>` : ''}
   `;
   
   if (isFolder) {
-    card.addEventListener('click', () => {
-      document.querySelectorAll('.folder-item').forEach(f => f.classList.remove('active'));
-      showFolder(fullPath);
+    // Single click to select folder
+    card.addEventListener('click', (e) => {
+      if (e.shiftKey) {
+        // Shift+click to navigate into folder
+        showFolder(fullPath);
+      } else {
+        // Regular click to select/deselect folder
+        toggleFolderSelection(card, fullPath);
+      }
     });
+    // Double-click to navigate into folder
     card.addEventListener('dblclick', () => showFolder(fullPath));
   } else {
     card.addEventListener('click', () => toggleFileSelection(card, fullPath));
@@ -201,6 +219,33 @@ function createFileCard(item, fullPath, isFolder) {
   card.addEventListener('contextmenu', (e) => showContextMenu(e, item, fullPath));
   
   return card;
+}
+
+// Count files in folder recursively
+function countFilesInFolder(items) {
+  let count = 0;
+  for (const item of items) {
+    if (item.type === 'file') {
+      count++;
+    } else if (item.type === 'folder' && item.children) {
+      count += countFilesInFolder(item.children);
+    }
+  }
+  return count;
+}
+
+// Toggle folder selection
+function toggleFolderSelection(card, path) {
+  if (selectedFolders.has(path)) {
+    selectedFolders.delete(path);
+    card.classList.remove('selected');
+  } else {
+    selectedFolders.add(path);
+    card.classList.add('selected');
+  }
+  
+  updateSelectionUI();
+  notifySelectionChanged();
 }
 
 // Toggle file selection
@@ -219,35 +264,70 @@ function toggleFileSelection(card, path) {
 
 // Update selection UI
 function updateSelectionUI() {
-  const count = selectedFiles.size;
-  selectionCount.textContent = `${count} file${count !== 1 ? 's' : ''} selected`;
+  const fileCount = selectedFiles.size;
+  const folderCount = selectedFolders.size;
+  const totalCount = fileCount + folderCount;
+  
+  let text = '';
+  if (folderCount > 0 && fileCount > 0) {
+    text = `${folderCount} folder${folderCount !== 1 ? 's' : ''}, ${fileCount} file${fileCount !== 1 ? 's' : ''} selected`;
+  } else if (folderCount > 0) {
+    text = `${folderCount} folder${folderCount !== 1 ? 's' : ''} selected`;
+  } else {
+    text = `${fileCount} file${fileCount !== 1 ? 's' : ''} selected`;
+  }
+  selectionCount.textContent = text;
   
   // Update tags
   selectedTags.innerHTML = '';
+  
+  // Add folder tags first
+  for (const path of selectedFolders) {
+    const name = path.split('/').pop() || path;
+    const tag = document.createElement('span');
+    tag.className = 'selected-tag';
+    tag.style.background = 'rgba(59, 130, 246, 0.2)';
+    tag.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+    tag.style.color = '#60a5fa';
+    tag.innerHTML = `📁 ${name} <span class="remove-tag" data-path="${path}">✕</span>`;
+    tag.querySelector('.remove-tag').addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectedFolders.delete(path);
+      updateSelectionUI();
+      notifySelectionChanged();
+      refreshFileGrid();
+    });
+    selectedTags.appendChild(tag);
+  }
+  
+  // Add file tags
   for (const path of selectedFiles) {
     const name = path.split('/').pop();
     const tag = document.createElement('span');
     tag.className = 'selected-tag';
-    tag.innerHTML = `${name} <span class="remove-tag" data-path="${path}">✕</span>`;
+    tag.innerHTML = `📄 ${name} <span class="remove-tag" data-path="${path}">✕</span>`;
     tag.querySelector('.remove-tag').addEventListener('click', (e) => {
       e.stopPropagation();
       selectedFiles.delete(path);
       updateSelectionUI();
       notifySelectionChanged();
-      // Update card if visible
-      document.querySelectorAll('.file-card').forEach(card => {
-        if (card.querySelector('.file-name')?.textContent === name) {
-          card.classList.remove('selected');
-        }
-      });
+      refreshFileGrid();
     });
     selectedTags.appendChild(tag);
   }
 }
 
+// Refresh file grid to update selection states
+function refreshFileGrid() {
+  showFolder(currentFolder);
+}
+
 // Notify main window of selection changes
 function notifySelectionChanged() {
-  window.sparkAPI.kbSendSelection([...selectedFiles]);
+  window.sparkAPI.kbSendSelection({
+    files: [...selectedFiles],
+    folders: [...selectedFolders]
+  });
 }
 
 // Apply selection and close

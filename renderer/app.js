@@ -30,9 +30,15 @@ let conversationHistory = [];
 let uploadedFile = null;
 let isConnected = false;
 let selectedKBFiles = new Set();
+let selectedKBFolders = new Set();
 let kbStructure = null;
 let contextTarget = null; // Current item for context menu
 let modalAction = null; // Current modal action
+
+// Selection bar elements
+const kbSelectionBar = document.getElementById('kbSelectionBar');
+const selectionTags = document.getElementById('selectionTags');
+const clearKBSelection = document.getElementById('clearKBSelection');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -70,6 +76,14 @@ document.addEventListener('DOMContentLoaded', () => {
       e.stopPropagation();
       handleContextAction(btn.dataset.action);
     });
+  });
+  
+  // Clear KB selection button
+  clearKBSelection.addEventListener('click', () => {
+    selectedKBFiles.clear();
+    selectedKBFolders.clear();
+    updateSelectionBar();
+    updateKBSelectedCount();
   });
   
   // Load KB structure
@@ -160,26 +174,81 @@ function toggleFileSelection(fileEl, path) {
 
 // Update selected count
 function updateKBSelectedCount() {
-  const count = selectedKBFiles.size;
-  kbSelected.querySelector('.kb-selected-count').textContent = 
-    `${count} file${count !== 1 ? 's' : ''} selected`;
+  const fileCount = selectedKBFiles.size;
+  const folderCount = selectedKBFolders.size;
+  const totalCount = fileCount + folderCount;
   
   // Update button style
-  kbToggleBtn.classList.toggle('active', count > 0);
-  kbToggleBtn.textContent = count > 0 ? `📚 KB (${count})` : '📚 KB';
+  kbToggleBtn.classList.toggle('active', totalCount > 0);
+  kbToggleBtn.textContent = totalCount > 0 ? `📚 KB (${totalCount})` : '📚 KB';
 }
 
 // Toggle KB panel - now opens separate window
 function toggleKBPanel() {
-  // Open the dedicated KB browser window
-  window.sparkAPI.kbOpenWindow([...selectedKBFiles]);
+  // Open the dedicated KB browser window with current selection
+  window.sparkAPI.kbOpenWindow({
+    files: [...selectedKBFiles],
+    folders: [...selectedKBFolders]
+  });
 }
 
 // Listen for selection updates from KB browser window
-window.sparkAPI.onKBSelectionUpdate((files) => {
-  selectedKBFiles = new Set(files);
+window.sparkAPI.onKBSelectionUpdate((data) => {
+  if (Array.isArray(data)) {
+    // Legacy: just files array
+    selectedKBFiles = new Set(data);
+    selectedKBFolders.clear();
+  } else {
+    // New format: {files: [], folders: []}
+    selectedKBFiles = new Set(data.files || []);
+    selectedKBFolders = new Set(data.folders || []);
+  }
   updateKBSelectedCount();
+  updateSelectionBar();
 });
+
+// Update selection bar under input
+function updateSelectionBar() {
+  const totalCount = selectedKBFiles.size + selectedKBFolders.size;
+  
+  if (totalCount === 0) {
+    kbSelectionBar.classList.add('hidden');
+    return;
+  }
+  
+  kbSelectionBar.classList.remove('hidden');
+  selectionTags.innerHTML = '';
+  
+  // Add folder tags
+  for (const folder of selectedKBFolders) {
+    const name = folder.split('/').pop() || folder;
+    const tag = document.createElement('span');
+    tag.className = 'selection-tag folder';
+    tag.innerHTML = `📁 ${name} <span class="tag-remove" data-type="folder" data-path="${folder}">✕</span>`;
+    tag.querySelector('.tag-remove').addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectedKBFolders.delete(folder);
+      updateSelectionBar();
+      updateKBSelectedCount();
+    });
+    selectionTags.appendChild(tag);
+  }
+  
+  // Add file tags
+  for (const file of selectedKBFiles) {
+    const name = file.split('/').pop();
+    const tag = document.createElement('span');
+    tag.className = 'selection-tag';
+    tag.innerHTML = `📄 ${name} <span class="tag-remove" data-type="file" data-path="${file}">✕</span>`;
+    tag.querySelector('.tag-remove').addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectedKBFiles.delete(file);
+      updateSelectionBar();
+      updateKBSelectedCount();
+    });
+    selectionTags.appendChild(tag);
+  }
+}
 
 // Show context menu
 function showContextMenu(e, item) {
@@ -351,14 +420,55 @@ async function sendMessage() {
     removeFile();
   }
   
-  // Add KB context if files selected
+  // Add KB context if files or folders selected
   let kbContext = '';
-  if (selectedKBFiles.size > 0) {
-    const kbFiles = await window.sparkAPI.readKBFiles([...selectedKBFiles]);
+  const allFiles = [...selectedKBFiles];
+  
+  // Expand folders to files
+  if (selectedKBFolders.size > 0 && kbStructure) {
+    for (const folderPath of selectedKBFolders) {
+      const filesInFolder = getFilesInFolder(kbStructure, folderPath);
+      allFiles.push(...filesInFolder);
+    }
+  }
+  
+  if (allFiles.length > 0) {
+    const kbFiles = await window.sparkAPI.readKBFiles(allFiles);
     kbContext = kbFiles
       .filter(f => !f.error)
       .map(f => `--- ${f.name} ---\n${f.content}`)
       .join('\n\n');
+  }
+  
+  // Helper function to get all files in a folder recursively
+  function getFilesInFolder(items, folderPath) {
+    const files = [];
+    const parts = folderPath.split('/').filter(p => p);
+    let current = items;
+    
+    // Navigate to the folder
+    for (const part of parts) {
+      const folder = current.find(i => i.type === 'folder' && i.name === part);
+      if (folder && folder.children) {
+        current = folder.children;
+      } else {
+        return files;
+      }
+    }
+    
+    // Collect all files recursively
+    function collectFiles(items, basePath) {
+      for (const item of items) {
+        if (item.type === 'file') {
+          files.push(basePath ? `${basePath}/${item.name}` : item.name);
+        } else if (item.type === 'folder' && item.children) {
+          collectFiles(item.children, basePath ? `${basePath}/${item.name}` : item.name);
+        }
+      }
+    }
+    
+    collectFiles(current, folderPath);
+    return files;
   }
   
   addMessage(content, 'user');
