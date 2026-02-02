@@ -8,6 +8,7 @@ A native macOS desktop application for chatting with Spark LLM via Tailscale.
 
 - 💬 **Native macOS App** - Runs from /Applications folder
 - 🔗 **Tailscale Connection** - Connects to Spark at 100.86.36.112:30000
+- 🌐 **Translation** - Translate to German or English (Off / 🇩🇪 / 🇺🇸)
 - 📚 **Knowledge Base Toggle** - Enable CCSA knowledge base context
 - 🔍 **Web Search Toggle** - Allow web search augmentation
 - 📄 **File Upload** - Attach PDFs and text files for context
@@ -52,6 +53,7 @@ npm run build
 
 ### Options
 
+- **🌐 Translation** - Off (normal chat), Translate to German (🇩🇪), or Translate to English (🇺🇸)
 - **📚 Knowledge Base** - Includes CCSA policies/procedures context
 - **🔍 Web Search** - Enables web-augmented responses (on by default)
 - **📄 Upload** - Attach a file for context in your query
@@ -103,6 +105,19 @@ npm run build:app  # Creates .app bundle only
 └──────────────┘                   │  SGLang API  │
                                    └──────────────┘
 ```
+
+## Documentation
+
+Full documentation is in the `docs/` folder for building, using, and recreating the app:
+
+| Document | Description |
+|----------|-------------|
+| [**ARCHITECTURE.md**](docs/ARCHITECTURE.md) | How the app is built: process model, main/preload/renderer, IPC, and data flow |
+| [**BUILD-AND-RECREATE.md**](docs/BUILD-AND-RECREATE.md) | Step-by-step guide to recreate the entire application from scratch |
+| [**USER-GUIDE.md**](docs/USER-GUIDE.md) | How to use Spark Chat: connection, agents, Knowledge Base, upload, web search |
+| [**REFERENCE.md**](docs/REFERENCE.md) | Reference: Spark URL, paths, env vars, data formats, IPC channels, dependencies |
+
+Use **BUILD-AND-RECREATE.md** if you need to rebuild the app from zero (e.g. on a new machine or without the repo).
 
 ## License
 

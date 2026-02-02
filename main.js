@@ -269,7 +269,7 @@ ipcMain.handle('chat-request', async (event, { messages, useKnowledgeBase, useWe
       body: JSON.stringify({
         model: 'openai/gpt-oss-20b',
         messages: contextMessages,
-        max_tokens: 4000,
+        max_tokens: 8192,
         temperature: 0.7,
         stream: false
       })

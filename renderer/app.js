@@ -36,6 +36,12 @@ let contextTarget = null; // Current item for context menu
 let modalAction = null; // Current modal action
 let assistants = [];
 let currentAssistant = null;
+let translateMode = 'none'; // 'none', 'to-german', 'to-english'
+
+// Translation Elements
+const transNone = document.getElementById('transNone');
+const transGerman = document.getElementById('transGerman');
+const transEnglish = document.getElementById('transEnglish');
 
 // Agent elements
 const agentSelect = document.getElementById('agentSelect');
@@ -78,6 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Modal handlers
   modalCancel.addEventListener('click', hideModal);
   modalConfirm.addEventListener('click', handleModalConfirm);
+  
+  // Translation handlers
+  transNone.addEventListener('click', () => setTranslateMode('none'));
+  transGerman.addEventListener('click', () => setTranslateMode('to-german'));
+  transEnglish.addEventListener('click', () => setTranslateMode('to-english'));
   modalInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') handleModalConfirm();
     if (e.key === 'Escape') hideModal();
@@ -494,7 +505,17 @@ async function sendMessage() {
     return files;
   }
   
-  addMessage(content, 'user');
+  // Handle translation mode
+  let displayMessage = content;
+  if (translateMode === 'to-german') {
+    userMessage = `Translate the following text to German. Only respond with the translation, nothing else:\n\n${userMessage}`;
+    displayMessage = `🇩🇪 ${content}`;
+  } else if (translateMode === 'to-english') {
+    userMessage = `Translate the following German text to English. Only respond with the translation, nothing else:\n\n${userMessage}`;
+    displayMessage = `🇺🇸 ${content}`;
+  }
+  
+  addMessage(displayMessage, 'user');
   
   conversationHistory.push({
     role: 'user',
@@ -589,6 +610,27 @@ function addTypingIndicator(withSearch = false, withKB = false) {
 // Scroll to bottom
 function scrollToBottom() {
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+// Set translation mode
+function setTranslateMode(mode) {
+  translateMode = mode;
+  transNone.classList.toggle('active', mode === 'none');
+  transGerman.classList.toggle('active', mode === 'to-german');
+  transEnglish.classList.toggle('active', mode === 'to-english');
+  
+  // Update send button icon based on mode
+  const sendIcon = sendBtn.querySelector('.send-icon');
+  if (mode === 'none') {
+    sendIcon.textContent = '➤';
+    sendBtn.title = 'Send message';
+  } else if (mode === 'to-german') {
+    sendIcon.textContent = '🇩🇪';
+    sendBtn.title = 'Translate to German';
+  } else if (mode === 'to-english') {
+    sendIcon.textContent = '🇺🇸';
+    sendBtn.title = 'Translate to English';
+  }
 }
 
 // Clear chat
