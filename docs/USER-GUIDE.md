@@ -1,11 +1,14 @@
 # Spark Chat — User Guide
 
+<!-- DOCUMENT PURPOSE: Complete user guide for installing, configuring, and using Spark Chat, including all features like agents, Knowledge Base, translation, and web search -->
+
 How to use Spark Chat: connection, chatting, agents, Knowledge Base, file upload, and web search.
 
 ---
 
 ## Requirements
 
+<!-- REQUIREMENTS: System and network prerequisites for running Spark Chat -->
 - **macOS** 11.0 or later
 - **Tailscale** (or other way to reach the Spark server at `100.86.36.112`)
 - Spark backend running at `http://100.86.36.112:30000` (see Configuration to change this)
@@ -13,6 +16,8 @@ How to use Spark Chat: connection, chatting, agents, Knowledge Base, file upload
 ---
 
 ## Installation
+
+<!-- INSTALLATION: How to install Spark Chat from a DMG file or build from source code -->
 
 ### From DMG (recommended)
 
@@ -35,6 +40,7 @@ To build a distributable app: `npm run build` or `npm run build:dmg`.
 
 ## First launch
 
+<!-- FIRST LAUNCH: What to expect when starting Spark Chat for the first time and connection status indicators -->
 1. Make sure **Tailscale** is connected (or your network can reach the Spark host).
 2. Open **Spark Chat**.
 3. In the title bar you’ll see:
@@ -48,6 +54,7 @@ If you see Disconnected, check Tailscale, firewall, and that the Spark server is
 
 ## Main window
 
+<!-- MAIN WINDOW: Overview of the main chat interface and its components -->
 - **Title bar** — App name, icon, connection status. On macOS the window can be dragged by the title bar.
 - **Messages area** — Welcome text at start; then your messages (right, blue) and Spark’s replies (left, gray). Errors appear in red.
 - **Input area** — Agent selector, **KB** button, **Web Search** toggle, **Upload**, **Clear**, text box, and **Send** (arrow).
@@ -56,6 +63,7 @@ If you see Disconnected, check Tailscale, firewall, and that the Spark server is
 
 ## Sending messages
 
+<!-- SENDING MESSAGES: How to compose and send messages to Spark, including keyboard shortcuts -->
 1. Type in the text box at the bottom.
 2. **Send**:
    - Click the **Send** (➤) button, or  
@@ -75,6 +83,7 @@ Optional before sending:
 
 ## Agents
 
+<!-- AGENTS: How to use and manage AI assistants with custom system prompts -->
 Agents define the **system prompt** (persona and instructions) used for the conversation.
 
 - **Dropdown** (above the text box) — Select which agent to use. The first in the list is the default.
@@ -92,10 +101,12 @@ Changes are saved to disk and used the next time you send a message with that ag
 
 ## Knowledge Base (KB)
 
+<!-- KNOWLEDGE BASE: How to use the Knowledge Base feature to include context from markdown/text files in conversations -->
 The Knowledge Base is a folder of markdown/text files (e.g. policies, docs) that can be included as context when chatting.
 
 ### Where the KB lives
 
+<!-- KB LOCATION: Default and custom paths for the Knowledge Base directory -->
 By default the app uses:
 
 - **Path**: `~/Documents/Brain Vault/SecondBrain/SparkRAG`  
@@ -105,6 +116,7 @@ If that path doesn’t exist, the KB panel/window will show an error. Create the
 
 ### Selecting KB files for context
 
+<!-- KB SELECTION: Step-by-step process for selecting Knowledge Base files to include in chat context -->
 1. Click **📚 KB** in the input area.
 2. A **Knowledge Base Browser** window opens with:
    - **Sidebar** — Folder tree. Click a folder to see its contents; click again to select/deselect the whole folder for context.
@@ -121,6 +133,7 @@ You can remove individual tags with **✕** on the tag, or **Clear** to remove a
 
 ### Managing the KB (in the browser window)
 
+<!-- KB MANAGEMENT: How to create, rename, delete files/folders and drag-and-drop files for conversion -->
 - **New Folder** / **New File** — Create folder or `.md` file in the current folder.
 - **Open Folder** — Open the KB root folder in Finder.
 - **Right‑click** a file or folder — **Rename** or **Delete** (irreversible).
@@ -132,6 +145,7 @@ Supported conversions on drop: PDF, DOCX, DOC, TXT, RTF, MD, HTML, JSON, XML, CS
 
 ## File upload (per message)
 
+<!-- FILE UPLOAD: How to attach a single file (PDF, TXT, MD) to a message without adding it to the Knowledge Base -->
 Use this to attach a **single** file to your **next** message (not stored in the KB).
 
 1. Click **📄 Upload**.
@@ -145,6 +159,7 @@ To use many documents over time, put them in the Knowledge Base and select them 
 
 ## Translation
 
+<!-- TRANSLATION: How to use the translation feature to translate text to German or English -->
 You can send a message as a **translation request** so Spark replies with only the translation (no extra commentary).
 
 - **🌐 Off** — Normal chat; no translation (default).
@@ -153,6 +168,7 @@ You can send a message as a **translation request** so Spark replies with only t
 
 **How to use**
 
+<!-- TRANSLATION WORKFLOW: Detailed steps for using the translation modes -->
 1. In the input area, find the **🌐** translation controls (Off / 🇩🇪 / 🇺🇸).
 2. Click **Off**, **🇩🇪**, or **🇺🇸** to set the mode. The active button is highlighted.
 3. When a translation mode is active, the **Send** button shows the flag (🇩🇪 or 🇺🇸) and its tooltip changes to “Translate to German” or “Translate to English”.
@@ -175,22 +191,25 @@ So: one toggle controls whether “this conversation” uses web-augmented conte
 
 ## Clear chat
 
+<!-- CLEAR CHAT: How to start a new conversation by clearing the current one -->
 - **🗑️ Clear** — Clears the **current** conversation in the UI and in memory (no KB or agent change). The welcome message reappears. Use this to start a new thread.
 
 ---
 
 ## Keyboard shortcuts
 
+<!-- KEYBOARD SHORTCUTS: Available keyboard shortcuts for common actions -->
 | Shortcut      | Action           |
 |---------------|------------------|
 | **⌘ + Enter** | Send message (or send translation when a translation mode is active) |
-| **⌘ + N**     | New conversation (same as Clear; if not implemented, use Clear button) |
 
-(If you add ⌘+N in code, wire it to the same logic as the Clear button.)
+Note: ⌘ + N (New conversation) is currently not implemented; use the Clear button instead.
 
 ---
 
 ## Configuration
+
+<!-- CONFIGURATION: How to customize the Spark server URL and Knowledge Base path -->
 
 ### Spark server URL
 
@@ -210,6 +229,7 @@ Override with environment variable **SPARKRAG_PATH** (e.g. in a shell or launch 
 
 ## Troubleshooting
 
+<!-- TROUBLESHOOTING: Common issues and how to resolve them -->
 - **Disconnected**  
   - Confirm Tailscale (or your VPN) is on and the Spark host is reachable (e.g. `ping 100.86.36.112`).  
   - Confirm Spark is running and serving `/v1/models` and `/v1/chat/completions` on that host/port.

@@ -1,9 +1,12 @@
 # Spark Chat — Architecture
 
+<!-- DOCUMENT PURPOSE: This document describes the technical architecture of Spark Chat, including the Electron process model, file structure, IPC communication, and data flow -->
+
 This document describes how the application is built: process model, file roles, IPC, and data flow.
 
 ## Overview
 
+<!-- OVERVIEW: High-level explanation of the Electron architecture and the three main components -->
 Spark Chat is an **Electron** desktop app for macOS that talks to a Spark LLM API over the network (e.g. via Tailscale). It has:
 
 - **Main process** (`main.js`) — window lifecycle, file system, network, IPC handlers
@@ -18,6 +21,7 @@ Context isolation is on; Node is not exposed to renderer. All OS/network/file ac
 
 ## Directory Structure
 
+<!-- DIRECTORY STRUCTURE: Overview of the project file organization and what each directory contains -->
 ```
 spark-chat-app/
 ├── main.js              # Electron main process
@@ -48,8 +52,11 @@ At runtime, **packaged** app uses:
 
 ## Process Model
 
+<!-- PROCESS MODEL: Explanation of Electron's multi-process architecture and responsibilities of each process -->
+
 ### Main process (`main.js`)
 
+<!-- MAIN PROCESS: The Node.js backend process that manages windows, file system, network, and IPC -->
 - Creates and owns windows.
 - Registers all IPC handlers.
 - Uses Node/Electron APIs: `fs`, `path`, `dialog`, `shell`, `fetch`, and npm packages `pdf-parse`, `mammoth`.
@@ -72,6 +79,7 @@ Hardcoded endpoints in main (see REFERENCE.md for exact values):
 
 ### Preload (`preload.js`)
 
+<!-- PRELOAD SCRIPT: Security bridge between main and renderer processes using contextBridge -->
 - Runs in a privileged context; does not have DOM.
 - Uses `contextBridge.exposeInMainWorld('sparkAPI', { ... })` to expose only the following to renderer:
 
@@ -103,6 +111,7 @@ So: **all** backend behavior is triggered by these `sparkAPI` calls from the ren
 
 ### Renderer — Main window (`index.html` + `app.js` + `styles.css`)
 
+<!-- MAIN WINDOW RENDERER: The chat interface where users interact with Spark, manage conversations, and configure settings -->
 - **index.html**: Titlebar (with icon and connection status), messages area, KB panel (tree + selection), modals (KB create/rename, agent form), input area (agent dropdown, **translation toggle** Off/🇩🇪/🇺🇸, KB toggle, web search toggle, upload, clear), textarea, send button, uploaded-file strip, KB selection bar.
 - **app.js**:
   - Connection: `checkConnection()` on load and every 30s; enables/disables send.
@@ -115,6 +124,7 @@ So: **all** backend behavior is triggered by these `sparkAPI` calls from the ren
 
 ### Renderer — KB browser (`kb-browser.html` + `kb-browser.js` + `kb-browser.css`)
 
+<!-- KB BROWSER WINDOW: Separate window for browsing, managing, and selecting files from the Knowledge Base -->
 - **kb-browser.html**: Toolbar (new folder/file, open Finder, selection count, Apply), sidebar (path + folder tree), main area (file grid + drop overlay), footer (selected tags), modal, context menu.
 - **kb-browser.js**:
   - On load: `getKnowledgeBase()`, render folder tree and file grid; `onInitSelection` to set initial selected files/folders.
@@ -127,6 +137,7 @@ So: **all** backend behavior is triggered by these `sparkAPI` calls from the ren
 
 ## IPC Flow (Summary)
 
+<!-- IPC FLOW: Explanation of how inter-process communication works between main and renderer processes -->
 - **Renderer → Main**: `invoke('channel', ...args)` for all operations (chat, file, KB, assistants).
 - **Main → Renderer**:
   - Return values of `invoke()` (e.g. chat response, connection boolean, KB structure).
@@ -139,6 +150,7 @@ So the only “push” from main to renderer is selection updates and init-selec
 
 ## Build and Packaging
 
+<!-- BUILD AND PACKAGING: How the application is packaged for distribution using electron-builder -->
 - **Runtime**: `electron .` (or `npm start`) — runs with `main.js` as main, loads `renderer/index.html` in the default window.
 - **Packaging**: `electron-builder --mac` (see `package.json` scripts). Uses `assets/icon.icns`, includes `main.js`, `preload.js`, `renderer/**/*`, `assets/**/*`, `data/**/*`. Output: `dist/` (e.g. `.app` and `.dmg`).
 

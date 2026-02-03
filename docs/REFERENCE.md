@@ -1,11 +1,14 @@
 # Spark Chat — Reference
 
+<!-- DOCUMENT PURPOSE: Central reference for URLs, endpoints, paths, environment variables, data formats, and IPC channels used throughout the application -->
+
 Central reference for URLs, paths, environment variables, data formats, and IPC channels. Use this when recreating the app or changing configuration.
 
 ---
 
 ## Spark API
 
+<!-- SPARK API: Endpoints and parameters for communicating with the Spark LLM backend -->
 | Item | Value |
 |------|--------|
 | Chat completions | `http://100.86.36.112:30000/v1/chat/completions` |
@@ -19,6 +22,7 @@ Defined in **main.js** (e.g. `SPARK_URL` and the fetch URL in `check-connection`
 
 ## Paths
 
+<!-- PATHS: File system locations used by the application for Knowledge Base and assistant data -->
 | Purpose | Location | Notes |
 |--------|----------|--------|
 | Knowledge Base root | `process.env.SPARKRAG_PATH` or `path.join(os.homedir(), 'Documents', 'Brain Vault', 'SecondBrain', 'SparkRAG')` | main.js `KB_PATH` |
@@ -30,6 +34,7 @@ Defined in **main.js** (e.g. `SPARK_URL` and the fetch URL in `check-connection`
 
 ## Environment variables
 
+<!-- ENVIRONMENT VARIABLES: Optional environment variables for customizing application behavior -->
 | Variable | Used in | Purpose |
 |----------|---------|---------|
 | `SPARKRAG_PATH` | main.js | Override Knowledge Base root path |
@@ -40,6 +45,7 @@ Defined in **main.js** (e.g. `SPARK_URL` and the fetch URL in `check-connection`
 
 ## External HTTP
 
+<!-- EXTERNAL HTTP: Third-party APIs and URLs used for web search functionality -->
 - **DuckDuckGo Instant Answers**: `https://api.duckduckgo.com/?q=...&format=json&no_html=1`
 - **News / direct fetch** (when the user’s message matches): CNN Lite, BBC News, Reuters, NPR (text), AP News. Exact URLs are in `main.js` in `performWebSearch` (e.g. `https://lite.cnn.com/`, etc.).
 
@@ -47,8 +53,11 @@ Defined in **main.js** (e.g. `SPARK_URL` and the fetch URL in `check-connection`
 
 ## Data formats
 
+<!-- DATA FORMATS: Structures of JSON files and data objects used in the application -->
+
 ### assistants.json
 
+<!-- ASSISTANTS.JSON: Schema for defining AI assistant configurations with custom system prompts -->
 JSON file: **array of objects**. Each object:
 
 | Field | Type | Description |
@@ -78,6 +87,7 @@ Example:
 
 ### Knowledge Base tree (get-knowledge-base)
 
+<!-- KB TREE: Structure returned when scanning the Knowledge Base directory for files and folders -->
 Returned structure: **array of items**. Each item:
 
 - **Folder**: `{ name, path, type: 'folder', children: [ ... ] }`
@@ -87,6 +97,7 @@ Only `.md` and `.txt` files are included. `path` is relative to KB root (e.g. `"
 
 ### Chat request (renderer → main)
 
+<!-- CHAT REQUEST: Format for sending chat messages from renderer to main process, including translation -->
 `invoke('chat-request', { messages, useKnowledgeBase, useWebSearch, searchQuery? })`
 
 - `messages`: array of `{ role: 'system'|'user'|'assistant', content: string }`
@@ -98,12 +109,14 @@ Only `.md` and `.txt` files are included. `path` is relative to KB root (e.g. `"
 
 ### Select-file result (main → renderer)
 
+<!-- SELECT-FILE RESULT: Format of file upload data returned to renderer after user selects a file -->
 `{ path, name, content, type }` or `{ path, name, content, type, error: true }` on read error. `type` is extension (e.g. `.pdf`, `.txt`).
 
 ---
 
 ## IPC channels (reference)
 
+<!-- IPC CHANNELS: Complete list of inter-process communication channels between main and renderer processes -->
 | Channel | Direction | Handler in main.js | Purpose |
 |---------|-----------|--------------------|---------|
 | `select-file` | invoke | Yes | Open file dialog; return file content (PDF via pdf-parse, else UTF-8 text) |
@@ -132,6 +145,7 @@ Only `.md` and `.txt` files are included. `path` is relative to KB root (e.g. `"
 
 ## Preload API (window.sparkAPI)
 
+<!-- PRELOAD API: Safe JavaScript API exposed to renderer processes for accessing main process functionality -->
 As defined in **preload.js** (see ARCHITECTURE.md for the full table). All renderer→main calls go through these:
 
 - Chat: `sendMessage(messages, options)`, `checkConnection()`, `webSearch(query)`
@@ -146,6 +160,7 @@ As defined in **preload.js** (see ARCHITECTURE.md for the full table). All rende
 
 ## Build (electron-builder)
 
+<!-- BUILD: electron-builder configuration for packaging the macOS application -->
 - **appId**: `com.ccsa.spark-chat`
 - **productName**: `Spark Chat`
 - **mac.icon**: `assets/icon.icns`
@@ -157,6 +172,7 @@ As defined in **preload.js** (see ARCHITECTURE.md for the full table). All rende
 
 ## npm scripts
 
+<!-- NPM SCRIPTS: Available npm commands for running and building the application -->
 | Script | Command | Purpose |
 |--------|---------|---------|
 | start | `electron .` | Run app in development |
@@ -168,6 +184,7 @@ As defined in **preload.js** (see ARCHITECTURE.md for the full table). All rende
 
 ## Dependencies (package.json)
 
+<!-- DEPENDENCIES: Required npm packages and their purposes in the application -->
 - **electron** ^28.0.0 — runtime
 - **electron-builder** ^24.9.1 — packaging
 - **mammoth** ^1.11.0 — DOCX → text
